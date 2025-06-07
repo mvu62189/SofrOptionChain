@@ -45,8 +45,11 @@ def save_snapshot(df: pd.DataFrame):
     path = f'snapshots/snapshot_{timestamp}.csv'
     df.to_csv(path, index=False)
     print(f"[INFO] Snapshot saved: {path}")
+    return path
 
 def run_snapshot_job():
     print("[INFO] Running snapshot job...")
     df = fetch_snapshot()
-    save_snapshot(df)
+    path = save_snapshot(df)
+    if path:
+        print(f"[INFO] Snapshot available for downstream engien: {path}")
