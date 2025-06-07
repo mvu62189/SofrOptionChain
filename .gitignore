@@ -17,6 +17,8 @@ bloom_env/
 # Binary and build artifacts
 *.dll
 *.whl
+
+
 *.so
 *.zip
 *.exe
