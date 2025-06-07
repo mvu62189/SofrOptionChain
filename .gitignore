@@ -1,0 +1,22 @@
+# Python
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+env/
+venv/
+.bloomberg.log
+
+# Data
+*.csv
+*.xlsx
+*.log
+snapshots/
+logs/
+
+# VSCode
+.vscode/
+
+# OS junk
+.DS_Store
+Thumbs.db
