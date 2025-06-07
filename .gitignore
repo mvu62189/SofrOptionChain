@@ -1,22 +1,42 @@
-# Python
+# Python bytecode
 __pycache__/
-*.pyc
+*.py[cod]
 *.pyo
 *.pyd
+
+# Virtual environments
 env/
 venv/
+.venv/
+bloom_env/
+
+# Environment files
+.env
 .bloomberg.log
 
-# Data
+# Binary and build artifacts
+*.dll
+*.whl
+*.so
+*.zip
+*.exe
+
+# Data, logs, and runtime output
 *.csv
 *.xlsx
 *.log
-snapshots/
+*.db
+*.parquet
+*.pickle
 logs/
+snapshots/
+.cache/
+__snapshot__/
 
-# VSCode
+# VSCode and IDE metadata
 .vscode/
+.idea/
 
-# OS junk
+# OS-specific junk
 .DS_Store
 Thumbs.db
