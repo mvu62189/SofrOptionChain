@@ -1,6 +1,6 @@
 # Setup script for Bloomberg Python API
 
-$envName = "bloom_env"
+$envName = ".env/"
 $whlPath = "blpapi-3.25.3-py3-none-win_amd64.whl"
 $dllName = "blpapi3_64.dll"
 
