@@ -23,3 +23,18 @@ utils/ # Common functions (Bloomberg helpers, file ops, etc.)
 
 - Requires: `blpapi`, `xbbg`, `streamlit`, `pandas`, `schedule`, `apscheduler`
 - Configure Bloomberg session before running
+
+
+
+## ⚙️ Setup Instructions (Windows)
+
+### 1. Clone the Repo
+
+Open PowerShell and run:
+
+```powershell
+git clone https://github.com/mvu62189/SofrOptionChain.git
+cd SofrOptionChain
+
+
+
