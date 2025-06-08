@@ -42,3 +42,4 @@ __snapshot__/
 # OS-specific junk
 .DS_Store
 Thumbs.db
+desktop.ini
