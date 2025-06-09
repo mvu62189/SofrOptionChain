@@ -16,8 +16,12 @@ logging.basicConfig(
 logging.getLogger().addHandler(logging.StreamHandler())
 
 # ---------------- Config ----------------
-root_futures = ['SFRM5', 'SFRU5', 'SFRZ5']  # Extend this list as needed
-fields = ['opt_strike_px', 'bid', 'ask', 'last_price', 'volume', 'ivol_ask']
+root_futures = ['SFRM5', 'SFRU5', 'SFRZ5', 
+                'SFRH6', 'SFRM6', 'SFRU6', 'SFRZ6',
+                'SFRH7', 'SFRM7', 'SFRU7', 'SFRZ7',
+                'SFRH8', 'SFRM8', 'SFRU28', 'SFRZ28',
+                'SFRH29', 'SFRM6', 'SFRU6', 'SFRZ6']  # Extend this list as needed
+fields = ['Ticker', 'type', 'opt_strike_px', 'bid', 'ask', 'last_price', 'volume', 'ivol_ask']
 
 # ---------------- Ticker loader ----------------
 def get_option_tickers(root_ticker):
@@ -47,12 +51,24 @@ def fetch_snapshot():
         try:
             df_calls = blp.bdp(calls, fields).reset_index().rename(columns={'index': 'Ticker'})
             df_calls['type'] = 'C'
-            # print(f"[DEBUG] CALL columns: {df_calls.columns.tolist()}")
+            print(f"[DEBUG] CALL columns: {df_calls.columns.tolist()}")
+            
+            print("[DEBUG] Requested fields:", fields)
+            df_debug = blp.bdp(calls[:1], fields)
+            print("[DEBUG] Returned fields:", df_debug.columns.tolist())
+
             
             df_puts  = blp.bdp(puts, fields).reset_index().rename(columns={'index': 'Ticker'})
             df_puts['type'] = 'P'
-            # print(f"[DEBUG] PUT columns: {df_puts.columns.tolist()}")
+            print(f"[DEBUG] PUT columns: {df_puts.columns.tolist()}")
 
+            print("[DEBUG] Requested fields:", fields)
+            df_debug = blp.bdp(puts[:1], fields)
+            print("[DEBUG] Returned fields:", df_debug.columns.tolist())
+
+            print(blp.flds('SFRM5C 95.0 Comdty', show='description'))
+
+            
         except Exception as e:
             logging.error(f"Snapshot pull failed for {root}: {e}")
             continue
