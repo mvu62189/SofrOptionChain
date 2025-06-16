@@ -100,17 +100,16 @@ def run_snapshot():
             df_puts['type'] = 'p'
 
             df = pd.concat([df_calls, df_puts], ignore_index=True)
-            raw_df = df.copy()
-            for col in ['bid', 'ask']:
-                if col not in df.columns:
-                    logging.warning(f"{code}: Missing '{col}' column in raw data — filling with 0.")
-                    
-                    raw_df.to_csv(f"{out_dir}/{code}_raw_missing_{col}.csv", index=False)
 
-                    df[col] = 0
+            # if either bid or ask is entirely missing, drop this chain
+            missing = [c for c in ('bid','ask') if c not in df.columns]
+            if missing:
+                logging.warning(f"{code}: missing columns {missing}, dropping this chain.")
+                continue
 
-            df = df[df['bid'].notna() | df['ask'].notna()]
-            df[['bid', 'ask']] = df[['bid', 'ask']].fillna(0)
+            # now filter to truly liquid strikes (both bid and ask present)
+            df = df[(df['bid'].notna()) & (df['ask'].notna())]
+
             df['strike'] = df['ticker'].str.extract(r'(\d{2,3}\.\d{1,2})').astype(float)
 
             try:
