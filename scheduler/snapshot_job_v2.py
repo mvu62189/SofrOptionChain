@@ -1,3 +1,5 @@
+# Save snapshots as parquet to snapshots/yyyymmdd/hhmmss/SFRmy-mmm.parquet
+
 import os
 import sys
 import calendar
