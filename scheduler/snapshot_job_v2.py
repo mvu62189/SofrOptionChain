@@ -10,16 +10,19 @@ from pandas.tseries.holiday import USFederalHolidayCalendar
 # ---------------- Config ----------------
 MONTH_CODE_MAP = {'F': 1, 'G': 2, 'H': 3, 'J': 4, 'K': 5, 'M': 6,
                   'N': 7, 'Q': 8, 'U': 9, 'V': 10, 'X': 11, 'Z': 12}
+
+
+# ---------------- Config ----------------
 fields = ['opt_strike_px', 'bid', 'ask', 'last_price', 'volume']
 root_futures = [
-    'SFRM5', 'SFRU5', 'SFRZ5',
+    'SFRU5', 'SFRZ5',
     'SFRH6', 'SFRM6', 'SFRU6', 'SFRZ6',
     'SFRH7', 'SFRM7', 'SFRU7', 'SFRZ7',
     'SFRH8', 'SFRM8', 'SFRU28', 'SFRZ28',
-    'SFRH29'
+    'SFRH29', 'SFRM29', 'SFRU29', 'SFRZ29'
 ]
 if '--test' in sys.argv:
-    root_futures = ['SFRM5']
+    root_futures = ['SFRU5']
 
 # ---------------- Logging ----------------
 os.makedirs('logs', exist_ok=True)
@@ -52,12 +55,19 @@ def extract_option_code(ticker):
 def get_option_tickers(root_ticker):
     try:
         chain = blp.bds(f'{root_ticker} Comdty', 'OPT_CHAIN')
+        if chain.empty:
+            logging.warning(f"{root_ticker}: OPT_CHAIN is empty.")
+            return []
         col = [c for c in chain.columns if 'security' in c.lower()]
+        if not col:
+            logging.warning(f"{root_ticker}: No 'security' column in OPT_CHAIN.")
+            return []
         raw = chain[col[0]].dropna().astype(str)
         return [' '.join(s.split()) for s in raw.tolist()]
     except Exception as e:
         logging.error(f"Ticker fetch failed for {root_ticker}: {e}")
         return []
+
 
 # ---------------- Main Snapshot ----------------
 def run_snapshot():
@@ -90,6 +100,11 @@ def run_snapshot():
             df_puts['type'] = 'p'
 
             df = pd.concat([df_calls, df_puts], ignore_index=True)
+            for col in ['bid', 'ask']:
+                if col not in df.columns:
+                    logging.warning(f"{code}: Missing '{col}' column in raw data — filling with 0.")
+                    df[col] = 0
+
             df = df[df['bid'].notna() | df['ask'].notna()]
             df[['bid', 'ask']] = df[['bid', 'ask']].fillna(0)
             df['strike'] = df['ticker'].str.extract(r'(\d{2,3}\.\d{1,2})').astype(float)
@@ -112,6 +127,9 @@ def run_snapshot():
             file_name = f"{code}_{expiry.strftime('%b').lower() if pd.notna(expiry) else 'na'}.parquet"
             df.to_parquet(f"{out_dir}/{file_name}", index=False)
             logging.info(f"[SAVE] {code} → {file_name}")
+
+    logging.info(f"[SUMMARY] Total futures scanned: {len(root_futures)}")
+    logging.info(f"[SUMMARY] Output written to: {out_dir}")
 
     logging.info("[DONE] Snapshot job complete.")
 
