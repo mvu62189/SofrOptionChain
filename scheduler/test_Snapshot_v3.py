@@ -49,11 +49,19 @@ def fetch_snapshot():
 
     for root in root_futures:
         tickers = get_option_tickers(root)
+        print(f"[DEBUG] {root} tickers: {tickers[:5]} ... total: {len(tickers)}")  # Show sample tickers
+
         if not tickers:
             continue
 
         calls = [t for t in tickers if 'C ' in t]
         puts  = [t for t in tickers if 'P ' in t]
+
+        try:
+            future_px = blp.bdp([f"{root} Comdty"], ['PX_LAST']).iloc[0, 0]
+            print(f"[DEBUG] {root} future price: {future_px}")
+        except Exception as e:
+            print(f"[ERROR] Could not fetch future price for {root}: {e}")
 
         try:
             df_calls = blp.bdp(calls, fields).reset_index().rename(columns={'index': 'Ticker'})
@@ -63,6 +71,9 @@ def fetch_snapshot():
             df_puts = blp.bdp(puts, fields).reset_index().rename(columns={'index': 'Ticker'})
             df_puts['type'] = 'P'
             df_puts.columns = [c.lower() for c in df_puts.columns]
+
+            print(f"[DEBUG] df_calls for {root}:\n", df_calls.head())
+            print(f"[DEBUG] df_puts for {root}:\n", df_puts.head())
 
             for col in ['bid', 'ask', 'last_price', 'volume', 'ivol_ask']:
                 if col not in df_calls.columns:
@@ -90,7 +101,9 @@ def fetch_snapshot():
         df_all['strike'] = df_all['ticker'].str.extract(r'(\d{2,3}\.\d{1,2})').astype(float)
         df_all['call_ivm'] = df_all.apply(lambda x: x['ivol_ask'] if x['type'] == 'c' else None, axis=1)
         df_all['put_ivm'] = df_all.apply(lambda x: x['ivol_ask'] if x['type'] == 'p' else None, axis=1)
+        print(f"[DEBUG] df_all for {root}:\n", df_all.head())
 
+    
         merged = df_all.groupby(['expiry', 'strike']).agg({
             'call_ivm': 'max', 'put_ivm': 'max', 'bid': 'max', 'ask': 'max',
             'last_price': 'max', 'volume': 'sum'
@@ -120,6 +133,9 @@ def fetch_snapshot():
         smile_bands['put_iv_mid'] = smile_bands[['put_iv_bid', 'put_iv_ask']].mean(axis=1)
         smile_bands.insert(0, 'timestamp', timestamp)
         smile_band_data.append(smile_bands)
+
+        print(f"[DEBUG] merged for {root}:\n", merged.head())
+        print(f"[DEBUG] smile_bands for {root}:\n", smile_bands.head())
 
     if all_data:
         return pd.concat(all_data, ignore_index=True), pd.concat(smile_band_data, ignore_index=True)
