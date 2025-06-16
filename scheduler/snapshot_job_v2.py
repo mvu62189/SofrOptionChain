@@ -100,9 +100,13 @@ def run_snapshot():
             df_puts['type'] = 'p'
 
             df = pd.concat([df_calls, df_puts], ignore_index=True)
+            raw_df = df.copy()
             for col in ['bid', 'ask']:
                 if col not in df.columns:
                     logging.warning(f"{code}: Missing '{col}' column in raw data — filling with 0.")
+                    
+                    raw_df.to_csv(f"{out_dir}/{code}_raw_missing_{col}.csv", index=False)
+
                     df[col] = 0
 
             df = df[df['bid'].notna() | df['ask'].notna()]
