@@ -3,7 +3,7 @@ import numpy as np
 from scipy.stats import norm
 from scipy.optimize import brentq
 
-def invert_bachelier(F, T, K, ask_price):
+def bachelier_iv(F, T, K, ask_price):
     def price(sigma):
         d = (F - K)/(sigma*np.sqrt(T))
         return sigma*np.sqrt(T)*norm.pdf(d) + (F-K)*norm.cdf(d)
