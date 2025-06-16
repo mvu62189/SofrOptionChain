@@ -33,6 +33,7 @@ bloom_env/
 logs/
 snapshots/
 .cache/
+cache/
 __snapshot__/
 
 # VSCode and IDE metadata

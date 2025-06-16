@@ -1,10 +1,11 @@
 import os
 import sys
+import calendar
 import logging
 from datetime import datetime
 from xbbg import blp
 import pandas as pd
-
+from pandas.tseries.holiday import USFederalHolidayCalendar
 # ---------------- Logging Setup ----------------
 os.makedirs('logs', exist_ok=True)
 log_path = f'logs/snapshot_log_{datetime.now().strftime("%Y%m%d")}.log'
@@ -24,10 +25,30 @@ root_futures = [
     'SFRH8', 'SFRM8', 'SFRU28', 'SFRZ28',
     'SFRH29'
 ]
-if '--test' in sys.argv:
-    root_futures = ['SFRM5']
+
+MONTH_CODE_MAP = {
+    'F': 1, 'G': 2, 'H': 3, 'J': 4, 'K': 5, 'M': 6,
+    'N': 7, 'Q': 8, 'U': 9, 'V': 10, 'X': 11, 'Z': 12
+}
+
 
 fields = ['opt_strike_px', 'bid', 'ask', 'last_price', 'volume', 'ivol_ask']
+
+# ---------------- Helper Functions ----------------
+
+def third_wed(year, month):
+    c = calendar.Calendar()
+    wednesdays = [d for d in c.itermonthdates(year, month) if d.weekday() == 2 and d.month == month]
+    return wednesdays[2]
+
+def sofr_option_expiry(year, month):
+    third_wednesday = third_wed(year, month)
+    expiry = third_wednesday - pd.Timedelta(days=5)  # Prior Friday
+    holidays = USFederalHolidayCalendar().holidays(start=f'{year}-01-01', end=f'{year}-12-31')
+    while expiry in holidays or expiry.weekday() != 4:  # must be Friday and not holiday
+        expiry -= pd.Timedelta(days=1)
+    return expiry
+
 
 # ---------------- Ticker Loader ----------------
 def get_option_tickers(root_ticker):
@@ -44,15 +65,32 @@ def get_option_tickers(root_ticker):
         return []
 
 # ---------------- Snapshot Fetch ----------------
+def extract_option_code(ticker):
+    # Extracts the SFRxxx part from the ticker, e.g. SFRN5 from SFRN5P 90.25 Comdty
+    import re
+    m = re.match(r'(SFR\w+\d)[CP] ', ticker)
+    if m:
+        return m.group(1)
+    return None
+
 def fetch_snapshot():
     all_data, smile_band_data = [], []
 
     for root in root_futures:
         tickers = get_option_tickers(root)
-        print(f"[DEBUG] {root} tickers: {tickers[:5]} ... total: {len(tickers)}")  # Show sample tickers
+        print(f"[DEBUG] {root} tickers: {tickers[:5]} ... total: {len(tickers)}")
 
         if not tickers:
             continue
+
+        # List all unique SFRxxx codes found in this option chain
+        code_map = {}
+        for t in tickers:
+            code = extract_option_code(t)
+            if code:
+                code_map.setdefault(code, []).append(t)
+
+        print(f"[INFO] {root} option chain contains SFR codes: {sfr_codes}")
 
         calls = [t for t in tickers if 'C ' in t]
         puts  = [t for t in tickers if 'P ' in t]
@@ -72,8 +110,8 @@ def fetch_snapshot():
             df_puts['type'] = 'P'
             df_puts.columns = [c.lower() for c in df_puts.columns]
 
-            print(f"[DEBUG] df_calls for {root}:\n", df_calls.head())
-            print(f"[DEBUG] df_puts for {root}:\n", df_puts.head())
+            # List all fields returned by Bloomberg for this chain
+            print(f"[FIELDS] {root} option chain fields: {list(df_calls.columns)}")
 
             for col in ['bid', 'ask', 'last_price', 'volume', 'ivol_ask']:
                 if col not in df_calls.columns:
