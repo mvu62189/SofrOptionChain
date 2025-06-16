@@ -28,7 +28,7 @@ if __name__ == '__main__':
 ### JSON-lookup logic SABR
 ### ---------------------------------------
 
-from sabr_v4 import calibrate_full_parquet, fast_recalibrate_parquet
+from analytics_engine.sabr.sabr_v2 import calibrate_sabr_full, calibrate_sabr_fast
 import glob, os, json
 
 def choose_and_run(code, parquet_path):
@@ -36,11 +36,11 @@ def choose_and_run(code, parquet_path):
     os.makedirs(param_dir, exist_ok=True)
     existing = sorted(glob.glob(f"{param_dir}/*.json"))
     if not existing:
-        params = calibrate_full_parquet(parquet_path)
+        params = calibrate_sabr_full(parquet_path)
     else:
         latest = existing[-1]
         prev = json.load(open(latest))
-        params = fast_recalibrate_parquet(parquet_path, prev)
+        params = calibrate_sabr_fast(parquet_path, prev)
     ts = datetime.now().strftime("%Y%m%d%H%M%S")
     out = f"{param_dir}/{ts}.json"
     json.dump(params, open(out,"w"))
