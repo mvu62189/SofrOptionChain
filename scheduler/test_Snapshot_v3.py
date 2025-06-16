@@ -90,8 +90,6 @@ def fetch_snapshot():
             if code:
                 code_map.setdefault(code, []).append(t)
 
-        print(f"[INFO] {root} option chain contains SFR codes: {sfr_codes}")
-
         calls = [t for t in tickers if 'C ' in t]
         puts  = [t for t in tickers if 'P ' in t]
 
