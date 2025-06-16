@@ -1,9 +1,7 @@
 
 import numpy as np
-import pandas as pd
 from scipy.stats import norm
-from scipy.optimize import differential_evolution, minimize, brentq
-
+from scipy.optimize import brentq
 
 def invert_bachelier(F, T, K, ask_price):
     def price(sigma):
