@@ -8,7 +8,7 @@ from datetime import datetime
 import numpy as np
 import pandas as pd
 from analytics_engine.sabr.sabr_v2 import calibrate_sabr_full, calibrate_sabr_fast
-from analytics_engine.sabr.bachelier import bachelier_iv
+from analytics_engine.sabr.bachelier import bachelier_iv, bachelier_vega
 
 def setup_logger():
     logger = logging.getLogger("sabr_run")
@@ -18,10 +18,6 @@ def setup_logger():
     logger.addHandler(ch)
     return logger
 
-import numpy as np
-import pandas as pd
-from datetime import datetime
-from bachelier import bachelier_iv, bachelier_vega
 
 def load_and_prepare(path, logger=None, min_iv=1e-4, min_vega=1e-6):
     # 1) Read & basic bid/ask filter
@@ -40,7 +36,7 @@ def load_and_prepare(path, logger=None, min_iv=1e-4, min_vega=1e-6):
     # 3) Compute T once
     expiry_dt = pd.to_datetime(df.expiry_date.iloc[0]).date()
     snap_dt   = datetime.strptime(df.snapshot_ts.iloc[0], '%Y%m%d %H%M%S').date()
-    T = (expiry_dt - snap_dt).days / 365
+    T = max((expiry_dt - snap_dt).days, 1) / 365
 
     # 4) Invert to IV, floor it, compute vega, and filter
     strikes, ivs = [], []
