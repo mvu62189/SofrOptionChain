@@ -5,7 +5,7 @@ import numpy as np
 import pandas as pd
 from scipy.stats import norm
 from scipy.optimize import differential_evolution, minimize, brentq
-
+from analytics_engine.sabr.bachelier import bachelier_vega
 
 def sabr_vol_normal(F, K, T, alpha, beta, rho, nu):
     """Hagans normal-SABR implied vol."""
@@ -44,9 +44,11 @@ def calibrate_sabr_full(strikes: np.ndarray,
         model_vols = np.array([
             sabr_vol_normal(F, K, T, alpha, beta, rho, nu) for K in strikes
         ])
-        # weight by vega if desired, else uniform
-        errors = (model_vols - market_vols)**2
-        return np.mean(errors)
+        vegas = np.array([bachelier_vega(F, K, T, sigma) for K, sigma in zip(strikes, market_vols)])
+        # weight by vega
+        sq_errs = (model_vols - market_vols)**2
+        # normalize by total weight
+        return np.sum(sq_errs * vegas) / np.sum(vegas)
     # DE
     de = differential_evolution(
         objective, bounds, seed=42, popsize=20, maxiter=200, polish=False)
@@ -69,7 +71,16 @@ def calibrate_sabr_fast(strikes: np.ndarray,
         model_vols = np.array([
             sabr_vol_normal(F, K, T, alpha, beta, rho, nu) for K in strikes
         ])
-        return np.mean((model_vols - market_vols)**2)
+        # vega weights
+        vegas = np.array([
+            bachelier_vega(F, K, T, mkt_iv)
+        ])
+        # MSE/SSE
+        sq_err = (model_vols - market_vols)**2
+        total_wt = np.sum(vegas)
+        if total_wt <= 0:
+            return np.mean(sq_err)
+        return np.sum(sq_err * vegas) / total_wt
     res = minimize(objective, x0=init_params, bounds=bounds,
                    method='L-BFGS-B', options={'ftol':1e-14,'maxiter':100})
     return res.x if res.success else init_params
