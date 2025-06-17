@@ -1,6 +1,6 @@
 import numpy as np
 import pytest
-from sabr_v2 import sabr_vol_normal, calibrate_sabr_full, calibrate_sabr_fast
+from analytics_engine.sabr.sabr_v2 import sabr_vol_normal, calibrate_sabr_full, calibrate_sabr_fast
 
 # pick a “true” parameter set
 TRUE_PARAMS = dict(alpha=0.03, beta=0.5, rho=-0.2, nu=0.4)

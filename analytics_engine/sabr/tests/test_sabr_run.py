@@ -5,7 +5,7 @@ import numpy as np
 import pandas as pd
 import pytest
 from datetime import datetime
-import sabr_run
+from analytics_engine.sabr import sabr_run
 
 @pytest.fixture
 def fake_snapshot(tmp_path):

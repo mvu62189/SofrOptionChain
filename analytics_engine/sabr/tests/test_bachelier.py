@@ -1,6 +1,6 @@
 import numpy as np
 import pytest
-from bachelier import bachelier_iv, bachelier_price, bachelier_vega
+from analytics_engine.sabr.bachelier import bachelier_iv, bachelier_price, bachelier_vega
 
 def test_bachelier_price_and_vega_consistency():
     F, K, T, sigma = 100.0, 105.0, 30/365, 0.02
