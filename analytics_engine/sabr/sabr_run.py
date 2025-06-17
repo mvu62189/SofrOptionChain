@@ -41,7 +41,8 @@ def main():
     )
     parser.add_argument("parquet", help="Path to snapshot parquet file")
     parser.add_argument(
-        "--params-dir", default="sabr_params",
+        "--params-dir",
+        default="analytics_results/model_params",
         help="Base directory to store SABR parameter JSONs"
     )
     parser.add_argument(
@@ -52,8 +53,11 @@ def main():
 
     logger = setup_logger()
     strikes, vols, F, T = load_and_prepare(args.parquet, logger)
+ 
+    # Build model → expiry directory under analytics_results
     code = os.path.basename(args.parquet).split("_")[0]
-    code_dir = os.path.join(args.params_dir, code)
+    base_dir = os.path.join(args.params_dir, "sabr")
+    code_dir = os.path.join(base_dir, code)
     os.makedirs(code_dir, exist_ok=True)
 
     existing = sorted([f for f in os.listdir(code_dir) if f.endswith(".json")])
@@ -70,7 +74,12 @@ def main():
         prev = json.load(open(os.path.join(code_dir, existing[-1])))
         params = calibrate_sabr_fast(strikes, vols, F, T, np.array(prev))
 
-    ts = datetime.now().strftime("%Y%m%d%H%M%S")
+    # Use the snapshot’s own timestamp (YYYYMMDD/HHMMSS from the path)
+    parts = os.path.normpath(args.parquet).split(os.sep)
+    # expect .../snapshots/YYYYMMDD/HHMMSS/Foo.parquet
+    date_part, time_part = parts[-3], parts[-2]
+    ts = date_part + time_part
+
     out_file = os.path.join(code_dir, f"{ts}.json")
     with open(out_file, "w") as f:
         json.dump(params.tolist(), f)
@@ -79,3 +88,7 @@ def main():
 
 if __name__ == "__main__":
     main()
+
+
+
+# python analytics_engine/sabr/sabr_run.py snapshots/20250616/135106/SFRN5_jul.parquet --params-dir analytics_results/model_params --mode auto/ or force full/fast
