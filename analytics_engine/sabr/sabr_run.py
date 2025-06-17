@@ -18,9 +18,12 @@ def setup_logger():
     logger.addHandler(ch)
     return logger
 
-def load_and_prepare(path):
+def load_and_prepare(path, logger=None):
     df = pd.read_parquet(path)
     df = df[(df.bid>0)&(df.ask>0)]
+    
+    logger.info(f"Loaded {len(df)} rows from {path}")
+    
     df['mid_price'] = (df.bid + df.ask)/2
     strikes = df.strike.values
     F = df.future_px.iloc[0]
