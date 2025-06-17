@@ -1,4 +1,9 @@
 1. See repo
     git ls-tree -r HEAD --name-only
 
-2. 
+2. List branches
+    git branch (local)
+    git branch -r (remote)
+    git branch -a (all)
+    git branch -vv (details)
+    
