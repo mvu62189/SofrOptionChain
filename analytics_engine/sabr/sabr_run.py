@@ -36,7 +36,7 @@ def load_and_prepare(path, logger=None, min_iv=1e-4, min_vega=1e-6):
     # 3) Compute T once
     expiry_dt = pd.to_datetime(df.expiry_date.iloc[0]).date()
     snap_dt   = datetime.strptime(df.snapshot_ts.iloc[0], '%Y%m%d %H%M%S').date()
-    T = (expiry_dt - snap_dt).days / 365
+    T = max((expiry_dt - snap_dt).days, 1) / 365
 
     # 4) Invert to IV, floor it, compute vega, and filter
     strikes, ivs = [], []

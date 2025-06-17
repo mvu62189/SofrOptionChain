@@ -11,7 +11,7 @@ from analytics_engine.sabr import sabr_run
 def fake_snapshot(tmp_path):
     # build a minimal DataFrame matching the schema
     df = pd.DataFrame({
-        'ticker': ['SFRX5C 100.0', 'SFRX5P 100.0'],
+        'ticker': ['SFRU5C 100.0', 'SFRU5P 100.0'],
         'strike': [100.0, 100.0],
         'bid':    [2.0, 1.8],
         'ask':    [2.2, 2.0],
@@ -21,13 +21,14 @@ def fake_snapshot(tmp_path):
         # snapshot_ts in required format
         'snapshot_ts': ['20251121 120000', '20251121 120000']
     })
-    p = tmp_path / "test_snapshot.parquet"
+    p = tmp_path / "SFRU5_sep.parquet"
     df.to_parquet(p, index=False)
     return str(p)
 
 def test_sabr_run_creates_params(tmp_path, fake_snapshot, monkeypatch, caplog):
     # create a params dir
     params_dir = tmp_path / "params"
+    
     # simulate CLI invocation
     monkeypatch.setattr(sys, 'argv', [
         'sabr_run.py', fake_snapshot,
@@ -36,14 +37,17 @@ def test_sabr_run_creates_params(tmp_path, fake_snapshot, monkeypatch, caplog):
     ])
     caplog.set_level('INFO')
     sabr_run.main()
+    
     # after run, we should have one subfolder SFRX5 and at least one json inside
     code = 'SFRX5'
     code_dir = params_dir / "sabr" / code
     files = list(code_dir.glob("*.json"))
     assert len(files) == 1
+    
     # load and check it’s a list of 4 numbers
     params = json.load(open(files[0]))
     assert isinstance(params, list)
     assert set(params) == {"alpha","beta","rho","nu"}
+    
     # check log message
     assert "Saved SABR parameters to" in caplog.text

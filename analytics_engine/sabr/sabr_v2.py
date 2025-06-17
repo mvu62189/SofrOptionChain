@@ -74,6 +74,7 @@ def calibrate_sabr_fast(strikes: np.ndarray,
         # vega weights
         vegas = np.array([
             bachelier_vega(F, K, T, mkt_iv)
+            for K, mkt_iv in zip(strikes, market_vols)
         ])
         # MSE/SSE
         sq_err = (model_vols - market_vols)**2
