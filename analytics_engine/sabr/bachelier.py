@@ -8,8 +8,11 @@ def bachelier_iv(F, T, K, ask_price):
     def price(sigma):
         d = (F - K)/(sigma*np.sqrt(T))
         return sigma*np.sqrt(T)*norm.pdf(d) + (F-K)*norm.cdf(d)
-    intrinsic = max(0.0, F - K)
-    p = max(ask_price, intrinsic + 1e-8)
+    # intrinsic = max(0.0, F - K)
+    # p = max(ask_price, intrinsic + 1e-8)
+    
+    p = ask_price       # comment this out if use intrinsic above
+    
     for a,b in [(1e-8,0.5),(0.5,2.0),(2.0,10.0)]:
         if (price(a)-p)*(price(b)-p) < 0:
             return brentq(lambda x: price(x)-p, a, b, maxiter=200)

@@ -38,11 +38,12 @@ def test_sabr_run_creates_params(tmp_path, fake_snapshot, monkeypatch, caplog):
     sabr_run.main()
     # after run, we should have one subfolder SFRX5 and at least one json inside
     code = 'SFRX5'
-    code_dir = params_dir / code
+    code_dir = params_dir / "sabr" / code
     files = list(code_dir.glob("*.json"))
     assert len(files) == 1
     # load and check it’s a list of 4 numbers
     params = json.load(open(files[0]))
-    assert isinstance(params, list) and len(params) == 4
+    assert isinstance(params, list)
+    assert set(params) == {"alpha","beta","rho","nu"}
     # check log message
     assert "Saved SABR parameters to" in caplog.text
