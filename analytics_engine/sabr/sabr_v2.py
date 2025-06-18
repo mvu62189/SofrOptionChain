@@ -93,3 +93,6 @@ def calibrate_sabr_fast(strikes: np.ndarray,
     res = minimize(objective, x0=init_params, bounds=bounds,
                    method='L-BFGS-B', options={'ftol':1e-14,'maxiter':100})
     return res.x if res.success else init_params
+
+
+# test
