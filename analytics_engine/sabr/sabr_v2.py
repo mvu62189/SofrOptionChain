@@ -47,11 +47,13 @@ def calibrate_sabr_full(strikes: np.ndarray,
         vegas = np.array([bachelier_vega(F, K, T, sigma) for K, sigma in zip(strikes, market_vols)])
         # weight by vega
         sq_errs = (model_vols - market_vols)**2
-        # normalize by total weight
-        return np.sum(sq_errs * vegas) / np.sum(vegas)
+        # SSE
+        return np.sum(sq_errs * vegas)
+        # MSE
+        # return np.sum(sq_errs * vegas) / np.sum(vegas)
     # DE
     de = differential_evolution(
-        objective, bounds, seed=42, popsize=20, maxiter=200, polish=False)
+        objective, bounds, seed=42, popsize=40, maxiter=300, polish=False)
     # polish
     res = minimize(objective, x0=de.x, bounds=bounds, method='L-BFGS-B',
                    options={'ftol':1e-12,'maxiter':200})
@@ -76,12 +78,18 @@ def calibrate_sabr_fast(strikes: np.ndarray,
             bachelier_vega(F, K, T, mkt_iv)
             for K, mkt_iv in zip(strikes, market_vols)
         ])
-        # MSE/SSE
-        sq_err = (model_vols - market_vols)**2
-        total_wt = np.sum(vegas)
-        if total_wt <= 0:
-            return np.mean(sq_err)
-        return np.sum(sq_err * vegas) / total_wt
+        # MSE
+        #sq_err = (model_vols - market_vols)**2
+        #total_wt = np.sum(vegas)
+        #if total_wt <= 0:
+        #    return np.mean(sq_err)
+        #return np.sum(sq_err * vegas) / total_wt
+    
+        # SSE
+        sq_errs  = (model_vols - market_vols)**2
+        vega_err = vegas * sq_errs
+        return vega_err.sum()
+
     res = minimize(objective, x0=init_params, bounds=bounds,
                    method='L-BFGS-B', options={'ftol':1e-14,'maxiter':100})
     return res.x if res.success else init_params

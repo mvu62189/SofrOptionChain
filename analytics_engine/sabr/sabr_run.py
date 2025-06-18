@@ -33,10 +33,23 @@ def load_and_prepare(path, logger=None, min_iv=1e-4, min_vega=1e-6):
     if logger:
         logger.info(f"Rows with positive time‐value: {len(df)}")
 
-    # 3) Compute T once
+    # 3) Compute T
     expiry_dt = pd.to_datetime(df.expiry_date.iloc[0]).date()
-    snap_dt   = datetime.strptime(df.snapshot_ts.iloc[0], '%Y%m%d %H%M%S').date()
-    T = max((expiry_dt - snap_dt).days, 1) / 365
+#    raw = df.snapshot_ts.iloc[0]
+#    try:
+#        snap_dt = datetime.strptime(raw, '%Y%m%d %H%M%S').date()
+#    except ValueError:
+#        snap_dt = datetime.strptime(raw, '%Y%m%d%H%M%S').date()
+
+    raw   = df.snapshot_ts.iloc[0]
+    clean = raw.replace(" ", "")
+    snap_dt = datetime.strptime(clean, '%Y%m%d%H%M%S').date()
+    days    = (expiry_dt - snap_dt).days
+    # ensure at least one day so tests don’t drop everything
+    T = max(days, 1) / 365.0
+
+
+#    T = max((expiry_dt - snap_dt).days, 1) / 365
 
     # 4) Invert to IV, floor it, compute vega, and filter
     strikes, ivs = [], []
