@@ -3,7 +3,7 @@ import matplotlib.pyplot as plt
 import pandas as pd
 import pytest
 from analytics_engine.sabr.sabr_run import load_and_prepare
-from analytics_engine.sabr.sabr_v2 import calibrate_sabr_full, calibrate_sabr_fast
+from analytics_engine.sabr.sabr_v2 import calibrate_sabr_full, calibrate_sabr_fast, sabr_vol_normal
 from analytics_engine.sabr.sabr_rnd import compute_rnd
 from analytics_engine.sabr.bachelier import bachelier_price
 
@@ -18,7 +18,7 @@ def plot_smile_comparison(strikes, market_vols, model_vols, title):
     plt.show()
 
 def plot_rnd_comparison(strikes, market_rnd, model_rnd, title):
-    plt.figure(figsize=(8, 4))
+    plt.figure(figsize=(64, 32))
     plt.plot(strikes, market_rnd, 'o', label='Market RND')
     plt.plot(strikes, model_rnd, '-', label='Model RND')
     plt.title(title)
@@ -46,8 +46,8 @@ def rmse(a, b):
 
 def test_sabr_full_and_fast_integration():
     # Paths to two snapshots with the same expiry code
-    snapshot1 = 'snapshots/20250615/151230/SFRM5_jun.parquet'
-    snapshot2 = 'snapshots/20250616/102030/SFRM5_jun.parquet'
+    snapshot1 = 'snapshots/20250617/122819/SFRU5_sep.parquet'
+    snapshot2 = 'snapshots/20250618/161129/SFRU5_sep.parquet'
     params_dir = 'analytics_results/model_params'
 
     # Full calibration on snapshot1
