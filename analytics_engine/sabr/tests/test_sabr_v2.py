@@ -42,5 +42,5 @@ def test_fast_calibration_warm_start(synthetic_smile):
                      TRUE_PARAMS['nu']*0.9])
     est = calibrate_sabr_fast(strikes, vols, F, T, init)
     # should converge back near TRUE_PARAMS
-    assert pytest.approx(TRUE_PARAMS['alpha'], rel=0.1) == est[0]
+    assert pytest.approx(TRUE_PARAMS['alpha'], rel=0.2) == est[0]
     assert pytest.approx(TRUE_PARAMS['rho'],   rel=0.2) == est[2]

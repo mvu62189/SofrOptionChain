@@ -8,7 +8,6 @@ __pycache__/
 env/
 venv/
 .venv/
-bloom_env/
 
 # Environment files
 .env
