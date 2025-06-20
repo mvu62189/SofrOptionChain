@@ -112,7 +112,18 @@ def run_snapshot():
             # now filter to truly liquid strikes (both bid and ask present)
             df = df[(df['bid'].notna()) & (df['ask'].notna())]
 
-            df['strike'] = df['ticker'].str.extract(r'(\d{2,3}\.\d{1,2})').astype(float)
+            def trim_volume_edges(group):
+                # Find first and last index where volume is notna
+                valid = group['volume'].notna()
+                if not valid.any():
+                    return pd.DataFrame(columns=group.columns)  # No valid volume at all
+                first = valid.idxmax()
+                last = valid[::-1].idxmax()
+                return group.loc[first:last]
+
+            df = df.groupby('type', group_keys=False).apply(trim_volume_edges).reset_index(drop=True)
+
+            df['strike'] = df['ticker'].str.extract(r'(\d+\.\d+|\d+)').astype(float)
 
             try:
                 m_code = code[3]

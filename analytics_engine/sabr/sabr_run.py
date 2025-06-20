@@ -8,7 +8,8 @@ from datetime import datetime
 import numpy as np
 import pandas as pd
 from analytics_engine.sabr.sabr_v2 import calibrate_sabr_full, calibrate_sabr_fast
-from analytics_engine.sabr.bachelier import bachelier_iv, bachelier_vega
+from analytics_engine.sabr.bachelier import bachelier_vega
+from analytics_engine.sabr.iv_utils import implied_vol
 
 def setup_logger():
     logger = logging.getLogger("sabr_run")
@@ -48,6 +49,13 @@ def load_and_prepare(path, logger=None, min_iv=1e-4, min_vega=1e-6):
     # ensure at least one day so tests don’t drop everything
     T = max(days, 1) / 365.0
 
+    # re-extract call/put from the ticker
+    if 'type' not in df.columns:
+        df['type'] = (
+            df['ticker']
+              .str.extract(r'([CP])\b', expand=False)
+              .str.upper()
+        )
 
 #    T = max((expiry_dt - snap_dt).days, 1) / 365
 
@@ -56,7 +64,9 @@ def load_and_prepare(path, logger=None, min_iv=1e-4, min_vega=1e-6):
     for _, row in df.iterrows():
         K = row.strike
         p = row.mid_price
-        iv = bachelier_iv(row.future_px, T, K, p)
+        
+        opt_type = row.type.upper()  # ensure 'C' or 'P'
+        iv = implied_vol(row.future_px, T, K, p, opt_type, engine="bachelier")
         iv = max(iv, min_iv)
         vega = bachelier_vega(row.future_px, K, T, iv)
         if vega >= min_vega:
