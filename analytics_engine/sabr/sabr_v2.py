@@ -5,7 +5,7 @@ import numpy as np
 import pandas as pd
 from scipy.stats import norm
 from scipy.optimize import differential_evolution, minimize, brentq
-from analytics_engine.sabr.bachelier import bachelier_vega
+from bachelier import bachelier_vega
 
 def sabr_vol_normal(F, K, T, alpha, beta, rho, nu):
     """Hagans normal-SABR implied vol."""
@@ -45,10 +45,10 @@ def calibrate_sabr_full(strikes: np.ndarray,
             sabr_vol_normal(F, K, T, alpha, beta, rho, nu) for K in strikes
         ])
         vegas = np.array([bachelier_vega(F, K, T, sigma) for K, sigma in zip(strikes, market_vols)])
-        # weight by vega
+        w = vegas/vegas.sum()
         sq_errs = (model_vols - market_vols)**2
-        # SSE
-        return np.sum(sq_errs * vegas)
+        # SSE # weight by vega
+        return np.sum(sq_errs * w)
         # MSE
         # return np.sum(sq_errs * vegas) / np.sum(vegas)
     # DE
@@ -58,7 +58,7 @@ def calibrate_sabr_full(strikes: np.ndarray,
     res = minimize(objective, x0=de.x, bounds=bounds, method='L-BFGS-B',
                    options={'ftol':1e-12,'maxiter':200})
     return res.x if res.success else de.x
-
+    # return de.x
 
 # ─── B) Fast warm‐start recalibration ───────────────────────────────────────
 def calibrate_sabr_fast(strikes: np.ndarray,
@@ -95,4 +95,29 @@ def calibrate_sabr_fast(strikes: np.ndarray,
     return res.x if res.success else init_params
 
 
-# test 2
+def calibrate_sabr_fast_region_weighted(strikes, market_vols, F, T, init_params,
+                                        call_weight=1.0, put_weight=2.0):
+    """
+    Warm-start SABR recalibration but up-weight errors on the call side.
+    call_weight : how much more the strike<=F errors count.
+    put_weight  : weight for strike>F
+    """
+    # build a vega*region weight vector
+    vega = bachelier_vega(F, strikes, T, market_vols)
+    region = np.where(strikes <= F, call_weight, put_weight)
+    w = vega * region
+    w /= w.sum()
+
+    def objective(params):
+        a, b, r, n = params
+        model = np.array([sabr_vol_normal(F, K, T, a, b, r, n)
+                          for K in strikes])
+        err = model - market_vols
+        return np.sum(w * err * err)
+
+    # call L-BFGS-B from the initial guess
+    res = minimize(objective, x0=init_params,
+                   bounds=[(1e-4,5),(0,1),(-.999,.999),(1e-4,5)],
+                   method='L-BFGS-B',
+                   options={'ftol':1e-14,'maxiter':100})
+    return res.x if res.success else init_params
