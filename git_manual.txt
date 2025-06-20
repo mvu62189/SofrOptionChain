@@ -7,3 +7,29 @@
     git branch -a (all)
     git branch -vv (details)
     
+3. Move commit to new branch
+    git log --oneline                                           :find commit hashes
+    git cherry-pick hash1 hash2...                              : move to new (current) branch
+    git cherry-pick hash-before-first-commit^ last-commit-hash  : range
+    git reset --hard HEAD~<number-of-commits-moved>             : removes commits from old branch
+
+4. GpG sign
+a. Export keys
+    gpg --armor --export-secret-keys <your-correct-key-id> > private.key
+    gpg --armor --export <your-correct-key-id> > public.key
+
+b. Create .gnupg
+    gpg --list-keys             : create .gnupg folder
+    gpg --import private.key    : import key
+    gpg --import public.key     : import key
+
+c. Reconfigure git
+    git config --global user.signingkey <your-correct-key-id>   : set current signing key
+    git config --global commit.gpgsign true/false               : set automatic signing
+
+d. Verify:
+    gpg --list-secret-keys --keyid-format LONG  : list secret keys
+    git config --global user.signingkey         : Check git signing keys
+
+e. Sign a commit:
+    git commit -S -m 'test commit'
