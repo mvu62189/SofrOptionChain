@@ -5,7 +5,7 @@ import numpy as np
 import pandas as pd
 from scipy.stats import norm
 from scipy.optimize import differential_evolution, minimize, brentq
-from analytics_engine.sabr.bachelier import bachelier_vega
+from .bachelier import bachelier_vega
 
 def sabr_vol_normal(F, K, T, alpha, beta, rho, nu):
     """Hagans normal-SABR implied vol."""

@@ -3,7 +3,7 @@ import pandas as pd
 import numpy as np
 import os
 from datetime import datetime
-from analytics_engine.sabr.bachelier import bachelier_iv
+from bachelier import bachelier_iv
 
 st.set_page_config(layout="wide", page_title="SOFR Option Chain Diagnostics")
 st.title("SOFR Option Chain Diagnostics")
@@ -11,7 +11,7 @@ st.title("SOFR Option Chain Diagnostics")
 # --- Sidebar: Input parquet path ---
 st.sidebar.header("Input Snapshot")
 def select_parquet():
-    default = "analytics_engine/snapshots/20250617/122819/SFRU5_sep.parquet"
+    default = "snapshots/20250617/122819/SFRU5_sep.parquet"
     path = st.sidebar.text_input("Parquet file path", value=default)
     if not os.path.isfile(path):
         st.sidebar.error(f"File not found: {path}")
@@ -34,7 +34,7 @@ st.dataframe(df_raw)
 st.subheader("Parsed Strike Column")
 df = df_raw.copy()
 # Extract numbers (ints or decimals) from ticker
-df['strike'] = df['ticker'].str.extract(r'(\d+\.\d+|\d+)').astype(float)
+df['strike'] = df['ticker'].str.extract(r'\b(\d+\.\d+)\b')[0].astype(float)
 st.dataframe(df[['ticker','strike']].head(10))
 
 # --- Trim edges: drop extreme non‐liquid strikes ---
@@ -58,23 +58,26 @@ df_trim['mid_price'] = np.where(
 )
 st.dataframe(df_trim[['ticker','strike','bid','ask','mid_price']])
 
-# --- OTM Filter ---
+# --- OTM Filter (using existing type column) ---
 st.subheader("OTM Filtered Chain")
-# Determine forward price F from future_px column
-if 'future_px' not in df_trim.columns:
-    st.error("Column 'future_px' not found in data.")
-    st.stop()
+
+# Forward price
 F = float(df_trim.future_px.iloc[0])
 st.write(f"Forward price: {F}")
-# Determine option type from ticker
-df_trim['type'] = np.where(df_trim.ticker.str.contains(r'\sC\s'), 'call', 'put')
-# Filter OTM: calls where strike>=F, puts where strike<=F
+
+# Make sure your type column matches exactly 'C' or 'P'
+# If it's lower-case, convert:
+df_trim['type'] = df_trim['type'].str.upper()
+
+# Now filter OTM correctly
 df_otm = df_trim[
-    ((df_trim.type=='call')&(df_trim.strike>=F)) |
-    ((df_trim.type=='put') &(df_trim.strike<=F))
+    ((df_trim['type'] == 'C') & (df_trim['strike'] <= F)) |   # calls at-or-above forward
+    ((df_trim['type'] == 'P') & (df_trim['strike'] >= F))     # puts  at-or-below forward
 ].reset_index(drop=True)
+
 st.write(f"OTM strikes → {len(df_otm)} rows")
 st.dataframe(df_otm)
+
 
 # --- IV Inversion ---
 st.subheader("Implied Volatility via Bachelier")
