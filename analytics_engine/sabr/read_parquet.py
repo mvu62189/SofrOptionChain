@@ -3,7 +3,8 @@ import pandas as pd
 import numpy as np
 import os
 from datetime import datetime
-from bachelier import bachelier_iv
+from iv_utils import implied_vol
+from sabr_v2 import calibrate_sabr_full, calibrate_sabr_fast, sabr_vol_normal
 
 st.set_page_config(layout="wide", page_title="SOFR Option Chain Diagnostics")
 st.title("SOFR Option Chain Diagnostics")
@@ -79,6 +80,7 @@ st.write(f"OTM strikes → {len(df_otm)} rows")
 st.dataframe(df_otm)
 
 
+
 # --- IV Inversion ---
 st.subheader("Implied Volatility via Bachelier")
 # Compute time to expiry T
@@ -88,9 +90,29 @@ T = (expiry - snap_dt.date()).days / 365.0
 st.write(f"Time to expiry (T): {T:.4f} yrs")
 # Invert
 df_otm['iv'] = df_otm.apply(
-    lambda r: bachelier_iv(F, T, r.strike, r.mid_price) if not np.isnan(r.mid_price) else np.nan,
+    lambda r: implied_vol(
+        F=    float(r.future_px),
+        T=    T,
+        K=    r.strike,
+        price=r.mid_price,
+        opt_type=r.type,          # 'C' or 'P'
+        engine='bachelier'
+    ) if not np.isnan(r.mid_price) else np.nan,
     axis=1
 )
+
+df_otm = df_otm[df_otm.iv < 3.0]   # drop iv >300bp
+
+liquid = df_otm[df_otm.volume > 0]
+if liquid.empty:
+    raise ValueError("No OTM quotes with positive volume!")
+
+lo = liquid.strike.min()
+hi = liquid.strike.max()
+
+df_otm = df_otm[(df_otm.strike >= lo) & (df_otm.strike <= hi)]
+
+
 st.dataframe(df_otm[['strike','mid_price','iv']])
 
 # --- Smile Plot ---
@@ -99,7 +121,7 @@ chart_df = df_otm.set_index('strike')['iv']
 st.line_chart(chart_df)
 
 # --- SABR Calibration ---
-from analytics_engine.sabr.sabr_v2 import calibrate_sabr_full, sabr_vol_normal
+
 st.subheader("SABR Full Calibration")
 # Prepare arrays
 strikes = df_otm.strike.values

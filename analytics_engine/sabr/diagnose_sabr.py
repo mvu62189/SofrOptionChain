@@ -4,11 +4,11 @@ import pandas as pd
 import numpy as np
 import json
 from datetime import datetime
-from bachelier import bachelier_iv, bachelier_price, bachelier_vega
+from bachelier import bachelier_price, bachelier_vega
 from sabr_v2 import calibrate_sabr_full, calibrate_sabr_fast, sabr_vol_normal
 import os
 from pathlib import Path
-
+from .iv_utils import implied_vol
 
 # ─── Sidebar: Snapshot Selection ────────────────────────────────────────────
 st.title("SABR Calibration Diagnostics")
@@ -49,14 +49,46 @@ st.write(f"**Forward (F):** {F:.4f}   &nbsp;&nbsp; **Tenor (T):** {T:.4f} yrs")
 # ─── Show IV Inversion (Mid vs Ask) ─────────────────────────────────────────
 st.subheader("Implied Vol Comparison (Mid vs Ask)")
 demo = df_liq.head(5).copy()
-demo['iv_mid'] = demo.apply(lambda r: bachelier_iv(F,T,r.strike,(r.bid+r.ask)/2), axis=1)
-demo['iv_ask'] = demo.apply(lambda r: bachelier_iv(F,T,r.strike,r.ask), axis=1)
+demo['iv_mid'] = demo.apply(
+    lambda r: implied_vol(
+        F=F,
+        T=T,
+        K=r.strike,
+        price=0.5*(r.bid + r.ask),
+        opt_type=r.type,
+        engine='bachelier'
+    ) if (r.bid>0 and r.ask>0) else np.nan,
+    axis=1
+)
+
+demo['iv_ask'] = demo.apply(
+    lambda r: implied_vol(
+        F=F,
+        T=T,
+        K=r.strike,
+        price=r.ask,
+        opt_type=r.type,
+        engine='bachelier'
+    ) if r.ask>0 else np.nan,
+    axis=1
+)
+
 st.table(demo[['strike','bid','ask','iv_mid','iv_ask']])
 
 # ─── Plot Market Vol Smiles ──────────────────────────────────────────────────
 st.subheader("Market Volatility Smiles")
-df_liq['iv_mid'] = df_liq.apply(lambda r: bachelier_iv(F,T,r.strike,(r.bid+r.ask)/2), axis=1)
-df_liq['iv_ask'] = df_liq.apply(lambda r: bachelier_iv(F,T,r.strike,r.ask), axis=1)
+df_liq['iv_mid'] = df_liq.apply(
+    lambda r: implied_vol(F, T, r.strike, 0.5*(r.bid + r.ask), r.type, engine='bachelier')
+                  if (r.bid>0 and r.ask>0) else np.nan,
+    axis=1
+)
+
+df_liq['iv_ask'] = df_liq.apply(
+    lambda r: implied_vol(F, T, r.strike, r.ask, r.type, engine='bachelier')
+                  if r.ask>0 else np.nan,
+    axis=1
+)
+
 df_plot = df_liq.set_index('strike')[['iv_mid','iv_ask']]
 st.line_chart(df_plot)
 

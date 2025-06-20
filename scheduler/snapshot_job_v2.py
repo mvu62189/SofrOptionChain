@@ -1,113 +1,153 @@
-import streamlit as st
-import pandas as pd
-import numpy as np
+# Save snapshots as parquet to snapshots/yyyymmdd/hhmmss/SFRmy-mmm.parquet
+
 import os
+import sys
+import calendar
+import logging
 from datetime import datetime
-from analytics_engine.sabr.bachelier import bachelier_iv
+import pandas as pd
+from xbbg import blp
+from pandas.tseries.holiday import USFederalHolidayCalendar
 
-st.set_page_config(layout="wide", page_title="SOFR Option Chain Diagnostics")
-st.title("SOFR Option Chain Diagnostics")
+# ---------------- Config ----------------
+MONTH_CODE_MAP = {'F': 1, 'G': 2, 'H': 3, 'J': 4, 'K': 5, 'M': 6,
+                  'N': 7, 'Q': 8, 'U': 9, 'V': 10, 'X': 11, 'Z': 12}
 
-# --- Sidebar: Input parquet path ---
-st.sidebar.header("Input Snapshot")
-def select_parquet():
-    default = "analytics_engine/snapshots/20250617/122819/SFRU5_sep.parquet"
-    path = st.sidebar.text_input("Parquet file path", value=default)
-    if not os.path.isfile(path):
-        st.sidebar.error(f"File not found: {path}")
-        st.stop()
-    return path
 
-parquet_path = select_parquet()
+# ---------------- Config ----------------
+fields = ['opt_strike_px', 'bid', 'ask', 'last_price', 'volume']
+root_futures = [
+    'SFRU5', 'SFRZ5',
+    'SFRH6', 'SFRM6', 'SFRU6', 'SFRZ6',
+    'SFRH7', 'SFRM7', 'SFRU7', 'SFRZ7',
+    'SFRH8', 'SFRM8', 'SFRU28', 'SFRZ28',
+    'SFRH29', 'SFRM29', 'SFRU29', 'SFRZ29'
+]
+if '--test' in sys.argv:
+    root_futures = ['SFRU5']
 
-# --- Load raw chain ---
-@st.cache_data
-def load_chain(path):
-    df = pd.read_parquet(path)
-    return df
-
-df_raw = load_chain(parquet_path)
-st.subheader("Raw Option Chain")
-st.dataframe(df_raw)
-
-# --- Extract strike from ticker ---
-st.subheader("Parsed Strike Column")
-df = df_raw.copy()
-# Extract numbers (ints or decimals) from ticker
-df['strike'] = df['ticker'].str.extract(r'(\d+\.\d+|\d+)').astype(float)
-st.dataframe(df[['ticker','strike']].head(10))
-
-# --- Trim edges: drop extreme non‐liquid strikes ---
-st.subheader("Trimmed Option Chain")
-# Identify liquid strikes: bid>0 & ask>0
-liquid = df[(df.bid>0) & (df.ask>0)]
-if liquid.empty:
-    st.error("No liquid strikes found.")
-    st.stop()
-lo, hi = liquid.strike.min(), liquid.strike.max()
-df_trim = df[(df.strike>=lo) & (df.strike<=hi)].reset_index(drop=True)
-st.write(f"Trimming strikes to range [{lo}, {hi}] → {len(df_trim)} rows")
-st.dataframe(df_trim)
-
-# --- Compute mid_price ---
-st.subheader("Mid Prices (bid/ask mid)")
-df_trim['mid_price'] = np.where(
-    (df_trim.bid>0)&(df_trim.ask>0),
-    0.5*(df_trim.bid + df_trim.ask),
-    np.nan
+# ---------------- Logging ----------------
+os.makedirs('logs', exist_ok=True)
+log_path = f'logs/snapshot_log_{datetime.now().strftime("%Y%m%d")}.log'
+logging.basicConfig(
+    filename=log_path,
+    level=logging.INFO,
+    format='%(asctime)s [%(levelname)s] %(message)s',
 )
-st.dataframe(df_trim[['ticker','strike','bid','ask','mid_price']])
+logging.getLogger().addHandler(logging.StreamHandler())
 
-# --- OTM Filter ---
-st.subheader("OTM Filtered Chain")
-# Determine forward price F from future_px column
-if 'future_px' not in df_trim.columns:
-    st.error("Column 'future_px' not found in data.")
-    st.stop()
-F = float(df_trim.future_px.iloc[0])
-st.write(f"Forward price: {F}")
-# Determine option type from ticker
-df_trim['type'] = np.where(df_trim.ticker.str.contains(r'\sC\s'), 'call', 'put')
-# Filter OTM: calls where strike>=F, puts where strike<=F
-df_otm = df_trim[
-    ((df_trim.type=='call')&(df_trim.strike>=F)) |
-    ((df_trim.type=='put') &(df_trim.strike<=F))
-].reset_index(drop=True)
-st.write(f"OTM strikes → {len(df_otm)} rows")
-st.dataframe(df_otm)
+# ---------------- Helpers ----------------
+def third_wed(year, month):
+    weds = [d for d in calendar.Calendar().itermonthdates(year, month)
+            if d.weekday() == 2 and d.month == month]
+    return weds[2]
 
-# --- IV Inversion ---
-st.subheader("Implied Volatility via Bachelier")
-# Compute time to expiry T
-snap_dt = datetime.strptime(df_otm.snapshot_ts.iloc[0], '%Y%m%d %H%M%S')
-expiry = pd.to_datetime(df_otm.expiry_date.iloc[0]).date()
-T = (expiry - snap_dt.date()).days / 365.0
-st.write(f"Time to expiry (T): {T:.4f} yrs")
-# Invert
-df_otm['iv'] = df_otm.apply(
-    lambda r: bachelier_iv(F, T, r.strike, r.mid_price) if not np.isnan(r.mid_price) else np.nan,
-    axis=1
-)
-st.dataframe(df_otm[['strike','mid_price','iv']])
+def sofr_expiry(year, month):
+    expiry = third_wed(year, month) - pd.Timedelta(days=5)
+    holidays = USFederalHolidayCalendar().holidays(start=f'{year}-01-01', end=f'{year}-12-31')
+    while expiry.weekday() != 4 or expiry in holidays:
+        expiry -= pd.Timedelta(days=1)
+    return expiry
 
-# --- Smile Plot ---
-st.subheader("Market Volatility Smile (OTM)")
-chart_df = df_otm.set_index('strike')['iv']
-st.line_chart(chart_df)
+def extract_option_code(ticker):
+    import re
+    m = re.match(r'(SFR\w+\d)[CP] ', ticker)
+    return m.group(1) if m else None
 
-# --- SABR Calibration ---
-from analytics_engine.sabr.sabr_v2 import calibrate_sabr_full, sabr_vol_normal
-st.subheader("SABR Full Calibration")
-# Prepare arrays
-strikes = df_otm.strike.values
-vols = df_otm.iv.values
-mask = ~np.isnan(vols)
-strikes_fit = strikes[mask]
-vols_fit = vols[mask]
-# Calibrate
-a_alpha, a_beta, a_rho, a_nu = calibrate_sabr_full(strikes_fit, vols_fit, F, T)
-st.write(f"Params → alpha={a_alpha:.5f}, beta={a_beta:.3f}, rho={a_rho:.3f}, nu={a_nu:.5f}")
-# Model vols
-df_otm['model_iv'] = df_otm.strike.apply(lambda K: sabr_vol_normal(F, K, T, a_alpha, a_beta, a_rho, a_nu))
-st.subheader("Market vs Model IV")
-st.line_chart(df_otm.set_index('strike')[['iv','model_iv']])
+def get_option_tickers(root_ticker):
+    try:
+        chain = blp.bds(f'{root_ticker} Comdty', 'OPT_CHAIN')
+        if chain.empty:
+            logging.warning(f"{root_ticker}: OPT_CHAIN is empty.")
+            return []
+        col = [c for c in chain.columns if 'security' in c.lower()]
+        if not col:
+            logging.warning(f"{root_ticker}: No 'security' column in OPT_CHAIN.")
+            return []
+        raw = chain[col[0]].dropna().astype(str)
+        return [' '.join(s.split()) for s in raw.tolist()]
+    except Exception as e:
+        logging.error(f"Ticker fetch failed for {root_ticker}: {e}")
+        return []
+
+
+# ---------------- Main Snapshot ----------------
+def run_snapshot():
+    today = datetime.now().strftime('%Y%m%d')
+    timestamp = datetime.now().strftime('%H%M%S')
+    out_dir = f'snapshots/{today}/{timestamp}'
+    os.makedirs(out_dir, exist_ok=True)
+
+    for root in root_futures:
+        tickers = get_option_tickers(root)
+        if not tickers:
+            continue
+
+        logging.info(f"[{root}] total tickers: {len(tickers)}")
+        future_px = blp.bdp([f"{root} Comdty"], ['PX_LAST']).iloc[0, 0]
+
+        code_map = {}
+        for t in tickers:
+            code = extract_option_code(t)
+            if code:
+                code_map.setdefault(code, []).append(t)
+
+        for code, group in code_map.items():
+            calls = [t for t in group if 'C ' in t]
+            puts  = [t for t in group if 'P ' in t]
+
+            df_calls = blp.bdp(calls, fields).reset_index().rename(columns={'index': 'ticker'})
+            df_calls['type'] = 'c'
+            df_puts = blp.bdp(puts, fields).reset_index().rename(columns={'index': 'ticker'})
+            df_puts['type'] = 'p'
+
+            df = pd.concat([df_calls, df_puts], ignore_index=True)
+
+            # if either bid or ask is entirely missing, drop this chain
+            missing = [c for c in ('bid','ask') if c not in df.columns]
+            if missing:
+                logging.warning(f"{code}: missing columns {missing}, dropping this chain.")
+                continue
+
+            # now filter to truly liquid strikes (both bid and ask present)
+            df = df[(df['bid'].notna()) & (df['ask'].notna())]
+
+            def trim_volume_edges(group):
+                # Find first and last index where volume is notna
+                valid = group['volume'].notna()
+                if not valid.any():
+                    return pd.DataFrame(columns=group.columns)  # No valid volume at all
+                first = valid.idxmax()
+                last = valid[::-1].idxmax()
+                return group.loc[first:last]
+
+            df = df.groupby('type', group_keys=False).apply(trim_volume_edges).reset_index(drop=True)
+
+            df['strike'] = df['ticker'].str.extract(r'(\d+\.\d+|\d+)').astype(float)
+
+            try:
+                m_code = code[3]
+                year_digit = code[4:]
+                year = 2020 + int(year_digit) if len(year_digit) == 1 else 2000 + int(year_digit)
+                month = MONTH_CODE_MAP.get(m_code.upper(), 1)
+                expiry = sofr_expiry(year, month)
+            except Exception as e:
+                logging.warning(f"Could not determine expiry for {code}: {e}")
+                expiry = pd.NaT
+
+            df['expiry_code'] = code
+            df['expiry_date'] = expiry
+            df['snapshot_ts'] = f"{today} {timestamp}"
+            df['future_px'] = future_px
+
+            file_name = f"{code}_{expiry.strftime('%b').lower() if pd.notna(expiry) else 'na'}.parquet"
+            df.to_parquet(f"{out_dir}/{file_name}", index=False)
+            logging.info(f"[SAVE] {code} → {file_name}")
+
+    logging.info(f"[SUMMARY] Total futures scanned: {len(root_futures)}")
+    logging.info(f"[SUMMARY] Output written to: {out_dir}")
+
+    logging.info("[DONE] Snapshot job complete.")
+
+if __name__ == '__main__':
+    run_snapshot()
