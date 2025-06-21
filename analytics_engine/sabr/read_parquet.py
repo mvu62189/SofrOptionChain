@@ -36,6 +36,7 @@ st.subheader("Parsed Strike Column")
 df = df_raw.copy()
 # Extract numbers (ints or decimals) from ticker
 df['strike'] = df['ticker'].str.extract(r'\b(\d+\.\d+)\b')[0].astype(float)
+df['strike'] = (100 - df['strike'])/100
 st.dataframe(df[['ticker','strike']].head(10))
 
 # --- Trim edges: drop extreme non‐liquid strikes ---
@@ -57,13 +58,16 @@ df_trim['mid_price'] = np.where(
     0.5*(df_trim.bid + df_trim.ask),
     np.nan
 )
+
 st.dataframe(df_trim[['ticker','strike','bid','ask','mid_price']])
 
 # --- OTM Filter (using existing type column) ---
 st.subheader("OTM Filtered Chain")
 
 # Forward price
+df_trim['future_px'] = (100 - df_trim['future_px'])/100
 F = float(df_trim.future_px.iloc[0])
+
 st.write(f"Forward price: {F}")
 
 # Make sure your type column matches exactly 'C' or 'P'
@@ -72,8 +76,8 @@ df_trim['type'] = df_trim['type'].str.upper()
 
 # Now filter OTM correctly
 df_otm = df_trim[
-    ((df_trim['type'] == 'C') & (df_trim['strike'] <= F)) |   # calls at-or-above forward
-    ((df_trim['type'] == 'P') & (df_trim['strike'] >= F))     # puts  at-or-below forward
+    ((df_trim['type'] == 'C') & (df_trim['strike'] >= F)) |   # calls at-or-above forward
+    ((df_trim['type'] == 'P') & (df_trim['strike'] <= F))     # puts  at-or-below forward
 ].reset_index(drop=True)
 
 st.write(f"OTM strikes → {len(df_otm)} rows")
