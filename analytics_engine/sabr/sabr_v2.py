@@ -45,7 +45,8 @@ def calibrate_sabr_full(strikes: np.ndarray,
             sabr_vol_normal(F, K, T, alpha, beta, rho, nu) for K in strikes
         ])
         vegas = np.array([bachelier_vega(F, K, T, sigma) for K, sigma in zip(strikes, market_vols)])
-        w = vegas/vegas.sum()
+        # w = vegas/vegas.sum()
+        w = vegas * vegas
         sq_errs = (model_vols - market_vols)**2
         # SSE # weight by vega
         return np.sum(sq_errs * w)
@@ -87,8 +88,9 @@ def calibrate_sabr_fast(strikes: np.ndarray,
     
         # SSE
         sq_errs  = (model_vols - market_vols)**2
-        vega_err = vegas * sq_errs
-        return vega_err.sum()
+        vega_sq = vegas ** 2
+        vega_err = vega_sq * sq_errs
+        return vega_err.sum()/ vega_sq.sum()
 
     res = minimize(objective, x0=init_params, bounds=bounds,
                    method='L-BFGS-B', options={'ftol':1e-14,'maxiter':100})
@@ -105,7 +107,7 @@ def calibrate_sabr_fast_region_weighted(strikes, market_vols, F, T, init_params,
     # build a vega*region weight vector
     vega = bachelier_vega(F, strikes, T, market_vols)
     region = np.where(strikes <= F, call_weight, put_weight)
-    w = vega * region
+    w = (vega * region) ** 2
     w /= w.sum()
 
     def objective(params):

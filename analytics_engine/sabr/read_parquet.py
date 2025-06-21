@@ -4,7 +4,7 @@ import numpy as np
 import os
 from datetime import datetime
 from iv_utils import implied_vol
-from sabr_v2 import calibrate_sabr_full, calibrate_sabr_fast, sabr_vol_normal
+from sabr_v2 import calibrate_sabr_full, calibrate_sabr_fast, calibrate_sabr_fast_region_weighted ,sabr_vol_normal
 
 st.set_page_config(layout="wide", page_title="SOFR Option Chain Diagnostics")
 st.title("SOFR Option Chain Diagnostics")
@@ -130,9 +130,53 @@ mask = ~np.isnan(vols)
 strikes_fit = strikes[mask]
 vols_fit = vols[mask]
 # Calibrate
-a_alpha, a_beta, a_rho, a_nu = calibrate_sabr_full(strikes_fit, vols_fit, F, T)
-st.write(f"Params → alpha={a_alpha:.5f}, beta={a_beta:.3f}, rho={a_rho:.3f}, nu={a_nu:.5f}")
+params = calibrate_sabr_full(strikes_fit, vols_fit, F, T)
+st.write(f"Params → alpha={params[0]:.5f}, beta={params[1]:.3f}, rho={params[2]:.3f}, nu={params[3]:.5f}")
+m_params = calibrate_sabr_fast_region_weighted(strikes_fit, vols_fit, F, T, params, call_weight=5.0, put_weight=1.0)
+
+# add manual sliders
+st.sidebar.header("Manual SABR parameters")
+alpha = st.sidebar.slider("α", min_value=1e-4, max_value=5.0, value=float(m_params[0]), step=1e-4)
+beta  = st.sidebar.slider("β", min_value=0.0,  max_value=1.0, value=float(m_params[1]), step=1e-3)
+rho   = st.sidebar.slider("ρ", min_value=-0.999, max_value=0.999, value=float(m_params[2]), step=1e-003)
+nu    = st.sidebar.slider("ν", min_value=1e-4,  max_value=5.0, value=float(m_params[3]), step=1e-4)
+
+
+
 # Model vols
-df_otm['model_iv'] = df_otm.strike.apply(lambda K: sabr_vol_normal(F, K, T, a_alpha, a_beta, a_rho, a_nu))
-st.subheader("Market vs Model IV")
-st.line_chart(df_otm.set_index('strike')[['iv','model_iv']])
+df_otm['model_iv'] = df_otm.strike.apply(lambda K: sabr_vol_normal(F, K, T, params[0], params[1], params[2], params[3]))
+df_otm['model_iv_manual'] = df_otm.strike.apply(lambda K: sabr_vol_normal(F, K, T, alpha, beta, rho, nu))
+
+# --- Display SABR params ---    
+st.subheader("SABR Parameters")
+st.write(f"Full calibration → α={params[0]:.5f}, β={params[1]:.3f}, ρ={params[2]:.3f}, ν={params[3]:.5f}")
+st.write(f"Fast calibration → α={m_params[0]:.5f}, β={m_params[1]:.3f}, ρ={m_params[2]:.3f}, ν={m_params[3]:.5f}")
+st.write(f"Manual calibration → α={alpha:.5f}, β={beta:.3f}, ρ={rho:.3f}, ν={nu:.5f}")
+
+st.subheader("Market vs Model IV vs Manual Model IV")
+st.line_chart(df_otm.set_index('strike')[['iv','model_iv', 'model_iv_manual']])
+
+# ─── Recalibration Button ────────────────────────────────────────────────────
+if st.sidebar.button("Recalibrate around manual guess"):
+    # Recalibrate using the manual params
+    strikes_fit = df_otm.strike.values
+    vols_fit = df_otm.iv.values
+    mask = ~np.isnan(vols_fit)
+    strikes_fit = strikes_fit[mask]
+    vols_fit = vols_fit[mask]
+    
+    with st.spinner("Running fast SABR from manual seed…"):
+       # Fast recalibration
+        alpha, beta, rho, nu = calibrate_sabr_fast_region_weighted(
+            strikes_fit, vols_fit, F, T,
+            init_params=np.array([alpha, beta, rho, nu]), call_weight=5.0, put_weight=1.0
+        )
+    
+    st.write(f"Recalibrated → α={alpha:.5f}, β={beta:.3f}, ρ={rho:.3f}, ν={nu:.5f}")
+    
+    # Update model IVs
+    df_otm['model_iv_manual'] = df_otm.strike.apply(
+        lambda K: sabr_vol_normal(F, K, T, alpha, beta, rho, nu)
+    )
+
+    st.line_chart(df_otm.set_index('strike')[['iv', 'model_iv_manual']])
