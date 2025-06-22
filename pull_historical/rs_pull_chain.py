@@ -1,14 +1,14 @@
 from xbbg import blp
 import pandas as pd
 
-# Example: get SOFRU5 option chain as of June 1, 2024
+# Example: get SOFRU5 option chain as of June 1, 2025
 chain = blp.bds(
     'SFRU5 Comdty', 
     'OPT_CHAIN', 
     ovrds=[('CHAIN_DATE', '20250617')]  # override is key for history
 )
 
-# Use the actual security column from Bloomberg
+# Use the security column from Bloomberg
 ticker_col = [c for c in chain.columns if 'security' in c.lower()][0]
 tickers = chain[ticker_col].dropna().tolist()
 

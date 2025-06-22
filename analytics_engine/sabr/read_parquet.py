@@ -1,3 +1,5 @@
+#read_parquet.py
+
 import streamlit as st
 import pandas as pd
 import numpy as np
@@ -36,7 +38,7 @@ st.subheader("Parsed Strike Column")
 df = df_raw.copy()
 # Extract numbers (ints or decimals) from ticker
 df['strike'] = df['ticker'].str.extract(r'\b(\d+\.\d+)\b')[0].astype(float)
-df['strike'] = (100 - df['strike'])/100
+# df['strike'] = (100 - df['strike'])/100
 st.dataframe(df[['ticker','strike']].head(10))
 
 # --- Trim edges: drop extreme non‐liquid strikes ---
@@ -65,19 +67,22 @@ st.dataframe(df_trim[['ticker','strike','bid','ask','mid_price']])
 st.subheader("OTM Filtered Chain")
 
 # Forward price
-df_trim['future_px'] = (100 - df_trim['future_px'])/100
+# df_trim['future_px'] = (100 - df_trim['future_px'])/100
 F = float(df_trim.future_px.iloc[0])
 
-st.write(f"Forward price: {F}")
+df_trim.style.format({'future_px': '{:.5f}'})
 
-# Make sure your type column matches exactly 'C' or 'P'
+st.write(f"Forward price: {F:.5f}")
+
+
+# Make sure type column matches exactly 'C' or 'P'
 # If it's lower-case, convert:
 df_trim['type'] = df_trim['type'].str.upper()
 
 # Now filter OTM correctly
 df_otm = df_trim[
-    ((df_trim['type'] == 'C') & (df_trim['strike'] >= F)) |   # calls at-or-above forward
-    ((df_trim['type'] == 'P') & (df_trim['strike'] <= F))     # puts  at-or-below forward
+    ((df_trim['type'] == 'C') & (df_trim['strike'] > F)) |   # calls at-or-above forward
+    ((df_trim['type'] == 'P') & (df_trim['strike'] < F))     # puts  at-or-below forward
 ].reset_index(drop=True)
 
 st.write(f"OTM strikes → {len(df_otm)} rows")
@@ -105,7 +110,7 @@ df_otm['iv'] = df_otm.apply(
     axis=1
 )
 
-df_otm = df_otm[df_otm.iv < 3.0]   # drop iv >300bp
+df_otm = df_otm[df_otm.iv < 100]   # drop iv >300bp
 
 liquid = df_otm[df_otm.volume > 0]
 if liquid.empty:
@@ -114,8 +119,10 @@ if liquid.empty:
 lo = liquid.strike.min()
 hi = liquid.strike.max()
 
-df_otm = df_otm[(df_otm.strike >= lo) & (df_otm.strike <= hi)]
+df_otm = df_otm[(df_otm.strike >= lo-0.052) & (df_otm.strike <= hi+0.052)]
 
+df_otm['spread'] = df_otm['ask'] - df_otm['bid']
+df_otm = df_otm[df_otm.spread <= 0.012]  # filter out zero spreads
 
 st.dataframe(df_otm[['strike','mid_price','iv']])
 
@@ -133,29 +140,28 @@ vols = df_otm.iv.values
 mask = ~np.isnan(vols)
 strikes_fit = strikes[mask]
 vols_fit = vols[mask]
+
 # Calibrate
-params = calibrate_sabr_full(strikes_fit, vols_fit, F, T)
-st.write(f"Params → alpha={params[0]:.5f}, beta={params[1]:.3f}, rho={params[2]:.3f}, nu={params[3]:.5f}")
-m_params = calibrate_sabr_fast_region_weighted(strikes_fit, vols_fit, F, T, params, call_weight=5.0, put_weight=1.0)
+alpha_f, beta_f, rho_f, nu_f = calibrate_sabr_full(strikes_fit, vols_fit, F, T)
+st.write(f"Params → alpha={alpha_f:.5f}, rho={rho_f:.3f}, nu={nu_f:.5f}")
+alpha_fast, beta_fast, rho_fast, nu_fast = calibrate_sabr_fast(strikes_fit, vols_fit, F, T, init_params=(alpha_f, beta_f, rho_f, nu_f))
 
 # add manual sliders
 st.sidebar.header("Manual SABR parameters")
-alpha = st.sidebar.slider("α", min_value=1e-4, max_value=5.0, value=float(m_params[0]), step=1e-4)
-beta  = st.sidebar.slider("β", min_value=0.0,  max_value=1.0, value=float(m_params[1]), step=1e-3)
-rho   = st.sidebar.slider("ρ", min_value=-0.999, max_value=0.999, value=float(m_params[2]), step=1e-003)
-nu    = st.sidebar.slider("ν", min_value=1e-4,  max_value=5.0, value=float(m_params[3]), step=1e-4)
-
+alpha = st.sidebar.slider("α", min_value=1e-4, max_value=5.0, value=float(alpha_fast), step=1e-4)
+rho   = st.sidebar.slider("ρ", min_value=-0.999, max_value=0.999, value=float(rho_fast), step=1e-3)
+nu    = st.sidebar.slider("ν", min_value=1e-4, max_value=5.0, value=float(nu_fast), step=1e-4)
 
 
 # Model vols
-df_otm['model_iv'] = df_otm.strike.apply(lambda K: sabr_vol_normal(F, K, T, params[0], params[1], params[2], params[3]))
-df_otm['model_iv_manual'] = df_otm.strike.apply(lambda K: sabr_vol_normal(F, K, T, alpha, beta, rho, nu))
+df_otm['model_iv']        = sabr_vol_normal(F, df_otm.strike.values, T, alpha_f, rho_f, nu_f)
+df_otm['model_iv_manual'] = sabr_vol_normal(F, df_otm.strike.values, T, alpha, rho, nu)
 
 # --- Display SABR params ---    
 st.subheader("SABR Parameters")
-st.write(f"Full calibration → α={params[0]:.5f}, β={params[1]:.3f}, ρ={params[2]:.3f}, ν={params[3]:.5f}")
-st.write(f"Fast calibration → α={m_params[0]:.5f}, β={m_params[1]:.3f}, ρ={m_params[2]:.3f}, ν={m_params[3]:.5f}")
-st.write(f"Manual calibration → α={alpha:.5f}, β={beta:.3f}, ρ={rho:.3f}, ν={nu:.5f}")
+st.write(f"Full calibration → α={alpha_f:.5f}, ρ={rho_f:.3f}, ν={nu_f:.5f}")
+st.write(f"Fast calibration → α={alpha_fast:.5f}, ρ={rho_fast:.3f}, ν={nu_fast:.5f}")
+st.write(f"Manual calibration → α={alpha:.5f}, ρ={rho:.3f}, ν={nu:.5f}")
 
 st.subheader("Market vs Model IV vs Manual Model IV")
 st.line_chart(df_otm.set_index('strike')[['iv','model_iv', 'model_iv_manual']])
@@ -171,16 +177,16 @@ if st.sidebar.button("Recalibrate around manual guess"):
     
     with st.spinner("Running fast SABR from manual seed…"):
        # Fast recalibration
-        alpha, beta, rho, nu = calibrate_sabr_fast_region_weighted(
+        alpha, beta, rho, nu = calibrate_sabr_fast(
             strikes_fit, vols_fit, F, T,
-            init_params=np.array([alpha, beta, rho, nu]), call_weight=5.0, put_weight=1.0
+            init_params=np.array([alpha, beta_f, rho, nu])
         )
     
-    st.write(f"Recalibrated → α={alpha:.5f}, β={beta:.3f}, ρ={rho:.3f}, ν={nu:.5f}")
+    st.write(f"Recalibrated → α={alpha:.5f}, ρ={rho:.3f}, ν={nu:.5f}")
     
     # Update model IVs
     df_otm['model_iv_manual'] = df_otm.strike.apply(
-        lambda K: sabr_vol_normal(F, K, T, alpha, beta, rho, nu)
+        lambda K: sabr_vol_normal(F, K, T, alpha, rho, nu)
     )
 
     st.line_chart(df_otm.set_index('strike')[['iv', 'model_iv_manual']])
