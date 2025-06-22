@@ -7,6 +7,7 @@ import os
 from datetime import datetime
 from iv_utils import implied_vol
 from sabr_v2 import calibrate_sabr_full, calibrate_sabr_fast, calibrate_sabr_fast_region_weighted ,sabr_vol_normal
+from sabr_rnd import price_from_sabr, second_derivative, compute_rnd
 
 st.set_page_config(layout="wide", page_title="SOFR Option Chain Diagnostics")
 st.title("SOFR Option Chain Diagnostics")
@@ -190,3 +191,52 @@ if st.sidebar.button("Recalibrate around manual guess"):
     )
 
     st.line_chart(df_otm.set_index('strike')[['iv', 'model_iv_manual']])
+
+
+# --- RND: SABR vs Market ----------------------------------------
+st.subheader("Risk-Neutral Density (RND) Comparison")
+
+# 1. RND from SABR (fast calibration)
+rnd_strikes = df_otm.strike.values
+rnd_sabr = compute_rnd(
+    strikes=rnd_strikes, F=F, T=T,
+    alpha=alpha_fast, rho=rho_fast, nu=nu_fast
+)
+
+# 2. RND from market (using interpolated Bachelier prices from mid_price)
+# We need to interpolate a smooth price function from market data for finite-diff
+from scipy.interpolate import interp1d
+
+market_strikes = df_otm.strike.values
+market_prices = df_otm.mid_price.values
+
+# Interpolate mid_price to function for finite diff
+market_price_func = interp1d(
+    market_strikes, market_prices,
+    kind='cubic', fill_value="extrapolate", bounds_error=False
+)
+
+rnd_market = np.array([max(0, second_derivative(market_price_func, K)) for K in market_strikes])
+
+# Normalize densities for plotting (optional, since only relative shape matters)
+if np.sum(rnd_sabr) > 0:
+    rnd_sabr = rnd_sabr / np.trapezoid(rnd_sabr, rnd_strikes)
+if np.sum(rnd_market) > 0:
+    rnd_market = rnd_market / np.trapezoid(rnd_market, market_strikes)
+
+# Add to DataFrame for plotting
+df_otm['rnd_sabr'] = rnd_sabr
+df_otm['rnd_market'] = rnd_market
+
+
+# --- Plot RNDs ---
+import matplotlib.pyplot as plt
+
+fig, ax = plt.subplots()
+ax.plot(rnd_strikes, rnd_market, label="Market-derived RND", lw=2)
+ax.plot(rnd_strikes, rnd_sabr, label="SABR-derived RND", lw=2, linestyle="--")
+ax.set_xlabel("Strike")
+ax.set_ylabel("RND (normalized)")
+ax.legend()
+ax.set_title("Risk-Neutral Density (RND): Market vs SABR")
+st.pyplot(fig)

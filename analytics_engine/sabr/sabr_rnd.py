@@ -3,9 +3,9 @@ import os
 import json
 import argparse
 import numpy as np
-from .sabr_v2 import sabr_vol_normal
-from .bachelier import bachelier_price
-from .sabr_run import load_and_prepare
+from sabr_v2 import sabr_vol_normal
+from bachelier import bachelier_price
+from sabr_run import load_and_prepare
 
 
 
@@ -22,9 +22,10 @@ def second_derivative(f, x, h=1e-2):
     """Simple central difference 2nd derivative."""
     return (f(x + h) - 2*f(x) + f(x - h)) / (h ** 2)
 
-def compute_rnd(strikes, F, T, alpha, beta, rho, nu):
+def compute_rnd(strikes, F, T, alpha, rho, nu):
+    beta = 0.9  # Fixed beta 
     """Apply Breeden-Litzenberger on SABR-based prices."""
-    f = lambda K: bachelier_price(F, K, T, sabr_vol_normal(F, K, T, alpha, beta, rho, nu))
+    f = lambda K: bachelier_price(F, K, T, sabr_vol_normal(F, K, T, alpha, rho, nu))
     pdf = [max(0, second_derivative(f, K)) for K in strikes]
     return np.array(pdf)
 
