@@ -113,15 +113,17 @@ def run_snapshot():
             df = df[(df['bid'].notna()) & (df['ask'].notna())]
 
             def trim_volume_edges(group):
-                # Find first and last index where volume is notna
+                # Check if 'volume' column exists AND if it has at least one non-NA value
+                if 'volume' not in group.columns or group['volume'].isna().all():
+                    # Skip this group by returning an empty DataFrame with the expected columns and dtypes
+                    # This will prevent the KeyError and avoid processing groups with no valid volume
+                    return pd.DataFrame({col: pd.Series(dtype=group[col].dtype) for col in group.columns})
                 valid = group['volume'].notna()
-                if not valid.any():
-                    return pd.DataFrame(columns=group.columns)  # No valid volume at all
                 first = valid.idxmax()
                 last = valid[::-1].idxmax()
                 return group.loc[first:last]
 
-            df = df.groupby('type', group_keys=False).apply(trim_volume_edges).reset_index(drop=True)
+            df = df.groupby('type', group_keys=False).apply(trim_volume_edges, include_groups=False).reset_index(drop=True)
 
             df['strike'] = df['ticker'].str.extract(r'(\d+\.\d+|\d+)').astype(float)
 
