@@ -113,15 +113,30 @@ def run_snapshot():
             df = df[(df['bid'].notna()) & (df['ask'].notna())]
 
             def trim_volume_edges(group):
+                # Get the group label (the 'type' value for this group)
+                group_type = group.name 
+
                 # Check if 'volume' column exists AND if it has at least one non-NA value
                 if 'volume' not in group.columns or group['volume'].isna().all():
-                    # Skip this group by returning an empty DataFrame with the expected columns and dtypes
-                    # This will prevent the KeyError and avoid processing groups with no valid volume
-                    return pd.DataFrame({col: pd.Series(dtype=group[col].dtype) for col in group.columns})
+                    # Return an empty DataFrame with the expected columns and dtypes,
+                    # but also include the 'type' column for later joining
+                    empty_df = pd.DataFrame({col: pd.Series(dtype=group[col].dtype) for col in group.columns})
+                    # Add the 'type' column with the current group's type
+                    empty_df['type'] = group_type
+                    return empty_df
+
+                # If 'volume' column exists and has at least one non-NA value, proceed with trimming
                 valid = group['volume'].notna()
                 first = valid.idxmax()
                 last = valid[::-1].idxmax()
-                return group.loc[first:last]
+
+                # Get the trimmed DataFrame slice
+                trimmed_df = group.loc[first:last].copy()
+
+                # Add the 'type' column with the current group's type
+                trimmed_df['type'] = group_type
+
+                return trimmed_df
 
             df = df.groupby('type', group_keys=False).apply(trim_volume_edges, include_groups=False).reset_index(drop=True)
 
