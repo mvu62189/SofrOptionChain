@@ -9,6 +9,7 @@ import pandas as pd
 import numpy as np
 from datetime import datetime
 import os
+import hashlib
 
 # Calibration & pricing imports remain unchanged
 from iv_utils import implied_vol
@@ -75,7 +76,8 @@ def get_visibility_state(label, files, default=True):
         st.session_state[key][file_path] = st.sidebar.checkbox(
             f"Show {label} ({basename})",
             value=st.session_state[key].get(file_path, default),
-            key=f"{label}_{basename}"
+            # key=f"{label}_" + hashlib.md5(file_path.encode()).hexdigest()
+            key=f"{label}_{file_path}"
         )
     return st.session_state[key]
 
