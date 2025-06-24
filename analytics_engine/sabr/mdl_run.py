@@ -1,3 +1,8 @@
+# NOTE: NEED TO ADJUST PARQUET FILE NAMES WITH DATES ??
+# SO 1 CHAIN CAN BE UPLOADED FOR BOTH DATES ??
+
+# ** OR UPDATE FILE SELECTION PROCESS TO TIME SELECTION & CHAIN SELECTION FILTERING **
+
 # app.py (formerly read_parquet_v3.py)
 import streamlit as st
 import pandas as pd
@@ -13,6 +18,8 @@ from bachelier import bachelier_price
 
 # New modular imports
 from mdl_load import discover_snapshot_files, save_uploaded_files
+from mdl_calibration import fit_sabr
+from mdl_rnd_utils import market_rnd, model_rnd
 from mdl_plot import plot_vol_smile, plot_rnd
 
 st.set_page_config(layout="wide", page_title="SOFR Option Chain Diagnostics")
@@ -87,10 +94,50 @@ with col2:
 # --- 5. Process each file (caching untouched) ---
 @st.cache_data(show_spinner="Calibrating...", persist=True)
 def process_snapshot_file(parquet_path, manual_params):
-    # (existing snapshot + SABR + RND logic remains here unchanged)
-    ...  # placeholder for calibration code
-
+    df_raw = pd.read_parquet(parquet_path)
+    df = df_raw.copy()
+    df['strike'] = df['ticker'].str.extract(r'\b(\d+\.\d+)\b')[0].astype(float)
+    liquid = df[(df['bid']>0)&(df['ask']>0)]
+    if liquid.empty: return None
+    lo, hi = liquid['strike'].min(), liquid['strike'].max()
+    df_trim = df[(df['strike']>=lo)&(df['strike']<=hi)].reset_index(drop=True)
+    df_trim['mid_price'] = np.where((df_trim['bid']>0)&(df_trim['ask']>0), 0.5*(df_trim['bid']+df_trim['ask']), np.nan)
+    df_trim['type'] = df_trim['type'].str.upper()
+    F = float(df_trim['future_px'].iloc[0])
+    df_otm = df_trim[((df_trim['type']=='C')&(df_trim['strike']>F))|((df_trim['type']=='P')&(df_trim['strike']<F))].reset_index(drop=True)
+    df_otm = df_otm.sort_values(by='strike').reset_index(drop=True)
+    if df_otm.empty: return None
+    snap_dt = datetime.strptime(df_otm['snapshot_ts'].iloc[0], '%Y%m%d %H%M%S')
+    expiry = pd.to_datetime(df_otm['expiry_date'].iloc[0]).date()
+    T = (expiry - snap_dt.date()).days/365.0
+    df_otm['iv'] = df_otm.apply(lambda r: implied_vol(F=float(r['future_px']), T=T, K=r['strike'], price=r['mid_price'], opt_type=r['type'], engine='bachelier') if not np.isnan(r['mid_price']) else np.nan, axis=1)
+    df_otm = df_otm[df_otm['iv']<100]
+    liquid2 = df_otm[df_otm['volume']>0]
+    if liquid2.empty: return None
+    lo2, hi2 = liquid2['strike'].min(), liquid2['strike'].max()
+    df_otm = df_otm[(df_otm['strike']>=lo2-0.052)&(df_otm['strike']<=hi2+0.052)]
+    df_otm['spread'] = df_otm['ask'] - df_otm['bid']
+    df_otm = df_otm[df_otm['spread']<=0.012]
+    strikes = df_otm['strike'].values
+    market_iv = df_otm['iv'].values
+    mask = ~np.isnan(market_iv)
+    fit_order = np.argsort(strikes[mask])
+    strikes_fit = strikes[fit_order]
+    vols_fit = market_iv[fit_order]
+    params_fast, iv_model = fit_sabr(strikes_fit, F, T, vols_fit, method='fast')
+    params_man, iv_manual = (None, None)
+    if recalibrate and st.session_state.get('manual_file')==parquet_path:
+        params_man, iv_manual = fit_sabr(strikes_fit, F, T, vols_fit, method='fast', manual_params=manual_params)
+    model_iv = iv_model  # already on strikes_fit; use mask to insert? Simplify: plot only fitted strikes
+    mid_prices = df_otm['mid_price'].values
+    rnd_mkt = market_rnd(strikes, mid_prices)
+    rnd_sabr = model_rnd(strikes, F, T, params_fast)
+    rnd_man  = model_rnd(strikes, F, T, params_man) if params_man else None
+    print("rnd_sabr shape:", rnd_sabr.shape)
+    return {'strikes': strikes, 'market_iv': market_iv, 'model_iv': model_iv, 'iv_manual': iv_manual, 'rnd_market': rnd_mkt, 'rnd_sabr': rnd_sabr, 'rnd_manual': rnd_man, 'params_fast': params_fast, 'params_manual': params_man, 'mid_prices': mid_prices}
+    
 results = {f: process_snapshot_file(f, manual_params) for f in files_to_show}
+
 
 # --- 6. Plot via plotting module ---
 if st.session_state.get("refresh_vol", True):
@@ -113,3 +160,11 @@ with st.expander("SABR Parameters Table (per file, 3x3)"):
         if not res: continue
         st.markdown(f"**{os.path.basename(fname)}**")
         st.dataframe(res['params_table'])
+
+# 7. Debug 2.0 info
+with st.expander("Debug 2.0: Snapshot Data & Params"):
+    for f, res in results.items():
+        st.markdown(f"**{os.path.basename(f)}**")
+        st.write("Params Fast:", res['params_fast'])
+        st.write("Params Manual:", res['params_manual'])
+        st.write(res['mid_prices'])

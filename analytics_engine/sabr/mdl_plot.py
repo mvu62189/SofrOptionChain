@@ -16,7 +16,8 @@ def plot_vol_smile(results: dict, vol_visible: dict) -> plt.Figure:
         label = os.path.basename(fname)
         ax.plot(res['strikes'], res['market_iv'],    marker='o', linestyle='-', label=f"Market ({label})")
         ax.plot(res['strikes'], res['model_iv'],     marker='x', linestyle='--', label=f"SABR ({label})")
-        ax.plot(res['strikes'], res['model_iv_manual'], marker='s', linestyle=':', label=f"Manual ({label})")
+        if res.get('model_iv_manual') is not None:
+            ax.plot(res['strikes'], res['model_iv_manual'], marker='s', linestyle=':', label=f"Manual ({label})")
     ax.set_xlabel("Strike")
     ax.set_ylabel("IV")
     ax.set_title("Volatility Smile (OTM)")
