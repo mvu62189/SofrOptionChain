@@ -14,8 +14,8 @@ venv/
 .bloomberg.log
 
 # Binary and build artifacts
-*.dll
-*.whl
+#*.dll
+#*.whl
 
 
 *.so
@@ -23,17 +23,17 @@ venv/
 *.exe
 
 # Data, logs, and runtime output
-*.csv
-*.xlsx
-*.log
-*.db
-*.parquet
-*.pickle
-logs/
-snapshots/
-.cache/
-cache/
-__snapshot__/
+#*.csv
+#*.xlsx
+#*.log
+#*.db
+#*.parquet
+#*.pickle
+#logs/
+#snapshots/
+#.cache/
+#cache/
+#__snapshot__/
 
 # VSCode and IDE metadata
 .vscode/

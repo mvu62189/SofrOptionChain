@@ -2,6 +2,8 @@
 import numpy as np
 from typing import Tuple, Dict
 from sabr_v2 import calibrate_sabr_full, calibrate_sabr_fast, sabr_vol_normal
+import json, os
+
 
 def fit_sabr(strikes: np.ndarray, F: float, T: float,
              vols: np.ndarray, method: str = 'fast',
@@ -11,17 +13,23 @@ def fit_sabr(strikes: np.ndarray, F: float, T: float,
     If `manual_params` is provided, overwrite the calibrated params.
     """
 
+    # → choose initial beta: manual override or historical global
+    if manual_params is not None:
+        init_beta = 0
+    else:
+        init_beta = load_global_beta()
+
     # build a 4-tuple for the SABR routines
     if manual_params is not None:
         init_seq = (
             float(manual_params['alpha']),
-            float(manual_params['beta']),
+            init_beta,
             float(manual_params['rho']),
             float(manual_params['nu'])
         )
     else:
         # defaults from last known calibration
-        init_seq = (0.66745, 0.9, 0.79241, 2.46749)
+        init_seq = (0.66745, init_beta, 0.79241, 2.46749)
 
     # choose calibration engine
     if method == 'fast':
