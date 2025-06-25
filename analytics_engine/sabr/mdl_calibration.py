@@ -11,7 +11,7 @@ def fit_sabr(strikes: np.ndarray, F: float, T: float,
     If `manual_params` is provided, overwrite the calibrated params.
     """
 
-    # build a 4-tuple for the SABR routines, never pass a dict
+    # build a 4-tuple for the SABR routines
     if manual_params is not None:
         init_seq = (
             float(manual_params['alpha']),
@@ -21,7 +21,7 @@ def fit_sabr(strikes: np.ndarray, F: float, T: float,
         )
     else:
         # defaults from last known calibration
-        init_seq = (0.66745, 0.0, 0.79241, 2.46749)
+        init_seq = (0.66745, 0.9, 0.79241, 2.46749)
 
     # choose calibration engine
     if method == 'fast':

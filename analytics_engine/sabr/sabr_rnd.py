@@ -35,7 +35,7 @@ def second_derivative(f, x, h=None):
     return (f(x + h) - 2*f(x) + f(x - h)) / (h ** 2)
 
 def compute_rnd(strikes, F, T, alpha, rho, nu):
-    beta = 0.0  # Fixed beta 
+    beta = 0.5  # Fixed beta 
     """Apply Breeden-Litzenberger on SABR-based prices."""
     f = lambda K: bachelier_price(F, K, T, sabr_vol_normal(F, K, T, alpha, rho, nu))
     pdf = [max(0, second_derivative(f, K)) for K in strikes]
