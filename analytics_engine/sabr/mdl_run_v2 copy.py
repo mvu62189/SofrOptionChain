@@ -145,26 +145,21 @@ def process_snapshot_file(parquet_path, manual_params):
     strikes_fit = strikes[mask][fit_order]
     vols_fit = market_iv[mask][fit_order]
     
-    # Automatic calibration
-    params_fast, iv_model_fit, debug_data = fit_sabr(strikes_fit, F, T, vols_fit, method='fast')
-    
-    # --- THIS IS THE CORRECTED SECTION FOR MANUAL CALIBRATION ---
-    params_man, iv_manual = (None, None) # Initialize iv_manual as None for plotting
-    if recalibrate and st.session_state.get('manual_file') == parquet_path:
-        # Correctly unpack the 3-item tuple returned by fit_sabr
+    params_fast, iv_model, debug_data = fit_sabr(strikes_fit, F, T, vols_fit, method='fast')
+    params_man, iv_manual = (None, None)
+    if recalibrate and st.session_state.get('manual_file')==parquet_path:
         manual_results = fit_sabr(strikes_fit, F, T, vols_fit, method='fast', manual_params=manual_params)
-        
+        # *** FIX: Interpolate the manual IV from the fit grid back to the main strike grid for plotting ***
+        # Check if the calibration was successful before unpacking
         if manual_results and len(manual_results) == 3:
-            params_man, iv_manual_fit, _ = manual_results
+            params_man, iv_manual_fit, _ = manual_results # Unpack the tuple
             
-            # Interpolate the manual IV from the fit grid back to the main strike grid
+            # *** FIX: Interpolate the manual IV from the fit grid back to the main strike grid for plotting ***
             if iv_manual_fit is not None and len(iv_manual_fit) > 0:
                  iv_manual = np.interp(strikes, strikes_fit, iv_manual_fit)
+   
+    model_iv_on_market_strikes = np.interp(strikes, strikes_fit, iv_model)
     
-    # Interpolate the automatic model's IV back to the main grid for consistent plotting
-    model_iv_on_market_strikes = np.interp(strikes, strikes_fit, iv_model_fit)
-    # --- END OF CORRECTED SECTION ---
-
     mid_prices = df_otm['mid_price'].values
     rnd_mkt = market_rnd(strikes, mid_prices)
     rnd_sabr = model_rnd(strikes, F, T, params_fast)
@@ -174,8 +169,7 @@ def process_snapshot_file(parquet_path, manual_params):
     area_model  = float(np.trapezoid(rnd_sabr, strikes))
 
     return {'strikes': strikes, 'market_iv': market_iv,
-            'model_iv': model_iv_on_market_strikes, 
-            'iv_manual': iv_manual, 
+            'model_iv': model_iv_on_market_strikes, 'iv_manual': iv_manual,
             'rnd_market': rnd_mkt, 'rnd_sabr': rnd_sabr,
             'rnd_manual': rnd_man, 'params_fast': params_fast,
             'params_manual': params_man, 'mid_prices': mid_prices,
@@ -208,12 +202,14 @@ with col1:
 with col2:
     st.metric("Current β", f"{load_global_beta():.4f}")
 
-# --- 6. Plot via plotting module ---
+# --- 6. Plot via plotting module (CORRECTED SECTION) ---
 if st.session_state.get("refresh_vol", True):
     show_mkt_iv    = st.checkbox("Show Market IV",    value=True, key="toggle_mkt_iv")
     show_model_iv  = st.checkbox("Show SABR Model IV", value=True, key="toggle_model_iv")
-    show_manual_iv = st.checkbox("Show Manual IV",     value=True, key="toggle_manual_iv")
+    show_manual_iv = st.checkbox("Show Manual IV",     value=False, key="toggle_manual_iv")
 
+    # This is now the ONLY plotting call for the volatility smile.
+    # The redundant, direct matplotlib code has been removed.
     fig = plot_vol_smile(results, vol_visible, show_mkt_iv, show_model_iv, show_manual_iv)
     st.pyplot(fig, clear_figure=True)
 
@@ -223,6 +219,8 @@ if st.session_state.get("refresh_rnd", True):
     show_model_rnd  = st.checkbox("Show SABR RND",      value=True,   key="toggle_model_rnd")
     show_manual_rnd = st.checkbox("Show Manual RND",    value=False,  key="toggle_manual_rnd")
 
+    # This is now the ONLY plotting call for the RND.
+    # The redundant, direct matplotlib code has been removed.
     fig2 = plot_rnd(results, rnd_visible)
     st.pyplot(fig2, clear_figure=True)
 

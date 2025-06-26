@@ -10,6 +10,7 @@ import pandas as pd
 from sabr_v2 import calibrate_sabr_full, calibrate_sabr_fast
 from bachelier import bachelier_vega
 from iv_utils import implied_vol
+from black76 import b76_vega
 
 def setup_logger():
     logger = logging.getLogger("sabr_run")
@@ -66,9 +67,10 @@ def load_and_prepare(path, logger=None, min_iv=1e-4, min_vega=1e-6):
         p = row.mid_price
         
         opt_type = row.type.upper()  # ensure 'C' or 'P'
-        iv = implied_vol(row.future_px, T, K, p, opt_type, engine="bachelier")
+        iv = implied_vol(row.future_px, T, K, p, opt_type, engine="black76")
         iv = max(iv, min_iv)
-        vega = bachelier_vega(row.future_px, K, T, iv)
+        # vega = bachelier_vega(row.future_px, K, T, iv)
+        vega = b76_vega(row.future_px, K, T, iv)
         if vega >= min_vega:
             strikes.append(K)
             ivs.append(iv)

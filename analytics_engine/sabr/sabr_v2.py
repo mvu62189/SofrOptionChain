@@ -3,6 +3,7 @@
 import numpy as np
 from scipy.optimize import minimize, differential_evolution
 from bachelier import bachelier_vega
+from black76 import b76_vega
 
 def sabr_vol_normal(F, K, T, alpha, rho, nu):
     """
@@ -49,7 +50,61 @@ def sabr_vol_normal(F, K, T, alpha, rho, nu):
     return final_vol
 
 
-def calibrate_sabr_full(strikes, market_vols, F, T):
+def sabr_vol_lognormal(F, K, T, alpha, beta, rho, nu):
+    """
+    Hagan’s 2002 lognormal‐SABR approximation (β≠0).
+    Returns Black-76 implied vol for each strike K.
+    """
+    F = np.asanyarray(F)
+    K = np.asanyarray(K)
+
+    # ATM case
+    atm = np.isclose(F, K, rtol=1e-8, atol=1e-8)
+
+    iv = np.zeros_like(F)
+
+    if np.any(atm):
+        iv[atm] = (alpha / (F[atm]**(1 - beta))) * (
+            1
+            + (
+                ((1 - beta)**2 / 24) * (alpha**2) / (F[atm] ** (2 - 2*beta))
+                + (rho * beta * nu * alpha) / (4 * F[atm]**(1 - beta))
+                + (2 - 3 * rho**2) * nu**2 / 24
+            ) * T
+        )
+
+
+    # For non-ATM strikes, these are arrays. For ATM, some values will be NaN/inf due to log(1)=0.
+    logFK = np.log(F / K)
+    FKbeta = (F * K)**((1 - beta) / 2)
+    z = (nu / alpha) * FKbeta * logFK
+
+    # x(z) calculation
+    sqrt_term = np.sqrt(1 - 2 * rho * z + z**2)
+    x_of_z = np.log((sqrt_term + z - rho) / (1 - rho))
+
+    # The core term is z / x(z). The limit of this as z -> 0 is 1.
+    # We use np.where to handle the ATM case where z is zero, avoiding division by zero.
+    z_over_x = np.where(atm, 1.0, z / x_of_z)
+    
+    # First part of the formula
+    A = alpha / (FKbeta * (1 + ((1 - beta)**2 / 24) * (logFK**2) + ((1 - beta)**4 / 1920) * (logFK**4)))
+    
+    # Time-dependent part of the formula
+    B = 1 + (
+        ((1 - beta)**2 * alpha**2) / (24 * FKbeta**2) +
+        (rho * beta * nu * alpha) / (4 * FKbeta) +
+        ((2 - 3 * rho**2) * nu**2) / 24
+    ) * T
+
+    # Combine terms for the final lognormal volatility.
+    # For the ATM case (where atm_mask is True), z_over_x is 1, and the formula correctly
+    # collapses to the ATM approximation because A also simplifies correctly.
+    iv = A * z_over_x * B
+    
+    return iv
+
+def calibrate_sabr_full_normal(strikes, market_vols, F, T):
     """
     Calibrates Normal SABR parameters (alpha, rho, nu) to market vols.
     Beta is fixed to 0.
@@ -65,7 +120,8 @@ def calibrate_sabr_full(strikes, market_vols, F, T):
         alpha, rho, nu = params
         model_vols = sabr_vol_normal(F, strikes, T, alpha, rho, nu)
         
-        vegas = np.array([bachelier_vega(F, K, T, sigma) for K, sigma in zip(strikes, market_vols)])
+        vegas = np.array([b76_vega(F, K, T, sigma) for K, sigma in zip(strikes, market_vols)])
+        # vegas = np.array([bachelier_vega(F, K, T, sigma) for K, sigma in zip(strikes, market_vols)])
         w = vegas * vegas
         sq_errs = (model_vols - market_vols)**2
         return np.sum(sq_errs * w)
@@ -74,11 +130,11 @@ def calibrate_sabr_full(strikes, market_vols, F, T):
     
     # Reconstruct full parameter array with fixed beta
     alpha, rho, nu = de.x
-    beta = 0.9
+    beta = 1
     return np.array([alpha, beta, rho, nu])
 
 
-def calibrate_sabr_fast(strikes, market_vols, F, T, init_params):
+def calibrate_sabr_fast_normal(strikes, market_vols, F, T, init_params):
     """
     Warm-start Normal SABR recalibration. Beta is fixed to 0.
     """
@@ -102,7 +158,7 @@ def calibrate_sabr_fast(strikes, market_vols, F, T, init_params):
     
     # Reconstruct full parameter array with fixed beta
     alpha, rho, nu = res.x
-    beta = 0.9
+    beta = 1
     return np.array([alpha, beta, rho, nu])
 
 
@@ -119,7 +175,8 @@ def calibrate_sabr_fast_region_weighted(strikes, market_vols, F, T, init_params,
         (1e-4, 5.0)       # nu
     ]
     
-    vega = bachelier_vega(F, strikes, T, market_vols)
+    # vega = bachelier_vega(F, strikes, T, market_vols)
+    vega = b76_vega(F, strikes, T, market_vols)
     region = np.where(strikes <= F, call_weight, put_weight)
     w = (vega * region)**2
     if w.sum() > 0:
@@ -137,5 +194,37 @@ def calibrate_sabr_fast_region_weighted(strikes, market_vols, F, T, init_params,
     
     # Reconstruct full parameter array with fixed beta
     alpha, rho, nu = res.x
-    beta = 0.9
+    beta = 1
     return np.array([alpha, beta, rho, nu])
+
+
+def calibrate_sabr_full(strikes, market_vols, F, T):
+    """
+    Calibrate all four SABR params (α,β,ρ,ν) to Black-76 IVs.
+    """
+    bounds = [
+        (1e-4, 5.0),      # α
+        (0.0, 1.0),       # β
+        (-0.999, 0.999),  # ρ
+        (1e-4, 5.0)       # ν
+    ]
+    def obj(p):
+        a, b, r, n = p
+        ivm = sabr_vol_lognormal(F, strikes, T, a, b, r, n)
+        return np.sum((ivm - market_vols)**2)
+    res = differential_evolution(obj, bounds, seed=42, maxiter=200)
+    return res.x  # [α,β,ρ,ν]
+
+def calibrate_sabr_fast(strikes, market_vols, F, T, init_params):
+    """
+    Warm‐start lognormal SABR, optimizing α,ρ,ν with β fixed.
+    """
+    a0, b0, r0, n0 = init_params
+    x0 = [a0, r0, n0]
+    bounds = [(1e-4,5.0), (-0.999,0.999), (1e-4,5.0)]
+    def obj(v):
+        a, r, n = v
+        ivm = sabr_vol_lognormal(F, strikes, T, a, b0, r, n)
+        return np.mean((ivm - market_vols)**2)
+    res = minimize(obj, x0, bounds=bounds, method='L-BFGS-B')
+    return np.array([res.x[0], b0, res.x[1], res.x[2]])
