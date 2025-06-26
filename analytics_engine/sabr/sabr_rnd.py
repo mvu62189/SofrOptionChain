@@ -3,18 +3,20 @@ import os
 import json
 import argparse
 import numpy as np
-from sabr_v2 import sabr_vol_normal
+from sabr_v2 import sabr_vol_normal, sabr_vol_lognormal
 from bachelier import bachelier_price
 from sabr_run import load_and_prepare
-
+from black76 import black76_iv, b76_price
 
 
 def price_from_sabr(strikes, F, T, alpha, beta, rho, nu):
     """Price European options using SABR-fitted vols under Bachelier model."""
     prices = []
     for K in strikes:
-        sigma = sabr_vol_normal(F, K, T, alpha, rho, nu)
-        p = bachelier_price(F, K, T, sigma)
+        #sigma = sabr_vol_normal(F, K, T, alpha, rho, nu)
+        #p = bachelier_price(F, K, T, sigma)
+        sigma = sabr_vol_lognormal(F, K, T, alpha, beta, rho, nu)
+        p = b76_price(F, K, T, sigma)
         prices.append(p)
     return np.array(prices)
 
@@ -23,11 +25,11 @@ def second_derivative(f, x, h=None):
     If `f` is an array of values at `x`, approximate d2f/dx2 via two passes of np.gradient.
     Otherwise `f` is assumed callable and we do the finite‐difference f(x±h).
     """
-    import numpy as _np
+
     # array‐based branch
-    if isinstance(f, _np.ndarray):
+    if isinstance(f, np.ndarray):
         # first derivative, then second derivative
-        return _np.gradient(_np.gradient(f, x), x)
+        return np.gradient(np.gradient(f, x), x)
     # callable branch
     if h is None:
         # assume uniform spacing
@@ -35,9 +37,10 @@ def second_derivative(f, x, h=None):
     return (f(x + h) - 2*f(x) + f(x - h)) / (h ** 2)
 
 def compute_rnd(strikes, F, T, alpha, rho, nu):
-    beta = 0.5  # Fixed beta 
+    beta = 1.0  # Fixed beta 
     """Apply Breeden-Litzenberger on SABR-based prices."""
-    f = lambda K: bachelier_price(F, K, T, sabr_vol_normal(F, K, T, alpha, rho, nu))
+    #f = lambda K: bachelier_price(F, K, T, sabr_vol_normal(F, K, T, alpha, rho, nu))
+    f = lambda K: b76_price(F, K, T, sabr_vol_lognormal(F, K, T, alpha, rho, nu))
     pdf = [max(0, second_derivative(f, K)) for K in strikes]
     return np.array(pdf)
 

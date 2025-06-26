@@ -4,6 +4,7 @@ from typing import Dict
 from sabr_rnd import compute_rnd, second_derivative, price_from_sabr
 from scipy.interpolate import UnivariateSpline, interp1d
 from scipy.signal import savgol_filter
+from scipy.ndimage import gaussian_filter1d
 
 def market_rnd_old(strikes: np.ndarray, mid_prices: np.ndarray) -> np.ndarray:    
     """
@@ -56,8 +57,6 @@ def market_rnd(strikes: np.ndarray, mid_prices: np.ndarray) -> np.ndarray:
       5) interpolate back onto original strikes
     """
     
-
-
     # --- 1) Keep only liquid strikes (mid_price>0) ---
     mask = mid_prices > 0
     ks = strikes[mask]
@@ -121,7 +120,64 @@ def market_rnd(strikes: np.ndarray, mid_prices: np.ndarray) -> np.ndarray:
     # replace zero densities with NaN so they aren’t plotted
     # rnd_clipped[rnd_clipped < 0.1] = np.nan
     return rnd_on_strikes
-    # return np.clip(rnd_on_strikes, a_min=0.0, a_max=None)
+    return np.clip(rnd_on_strikes, a_min=0.0, a_max=None)
+
+def market_rnd_xprmt(strikes: np.ndarray, mid_prices: np.ndarray) -> np.ndarray:
+    """
+    Smooth Breeden–Litzenberger RND using a cascade of filters
+    with robust non-negativity enforcement.
+    """
+    # --- 1) Keep only liquid strikes (mid_price > 0) ---
+    mask = mid_prices > 0
+    ks = strikes[mask]
+    ps = mid_prices[mask]
+    if ks.size < 4: # Need enough points for the subsequent filters
+        return np.zeros_like(strikes)
+
+    # --- 2) Build a cubic interpolator for the price function ---
+    price_func = interp1d(
+        ks, ps, kind='cubic',
+        fill_value='extrapolate', bounds_error=False
+    )
+
+    # --- 3) Evaluate the second derivative on a fine uniform grid ---
+    n_grid = max(100, ks.size * 5)
+    ks_fine = np.linspace(ks.min(), ks.max(), n_grid)
+    h = ks_fine[1] - ks_fine[0]
+    
+    # Calculate the raw density
+    rnd_fine = second_derivative(price_func, ks_fine, h=h)
+    
+    # --- 4) Smooth the raw density using your advanced cascade ---
+    
+    # Stage 1: Gaussian filter for initial broad smoothing
+    rnd_smoothed = gaussian_filter1d(rnd_fine, sigma=3.0, mode='constant')
+
+    # Stage 2: Savitzky-Golay filter for more refined smoothing
+    w = min(len(rnd_smoothed) - 1 if len(rnd_smoothed) % 2 == 0 else len(rnd_smoothed), 51)
+    if w > 5: # Filter window must be larger than polyorder
+        try:
+            rnd_smoothed = savgol_filter(rnd_smoothed, window_length=w, polyorder=3, mode='interp')
+        except ValueError:
+            pass # Keep previous smoothing if savgol fails
+            
+    # *** CRITICAL FIX: Enforce non-negativity after all smoothing steps ***
+    rnd_smoothed = np.clip(rnd_smoothed, a_min=0.0, a_max=None)
+    
+    # --- 5) Normalize the clean, non-negative density to integrate to 1 ---
+    area = np.trapezoid(rnd_smoothed, ks_fine)
+    if area > 1e-8:
+        rnd_smoothed /= area
+    
+    # --- 6) Re‐sample the final density back to original strikes ---
+    rnd_interp_func = interp1d(
+        ks_fine, rnd_smoothed, kind='linear',
+        fill_value=0.0, bounds_error=False
+    )
+    rnd_on_strikes = rnd_interp_func(strikes)
+
+    # Return the final result, with one last clip for safety
+    return np.clip(rnd_on_strikes, a_min=0.0, a_max=None)
 
 def model_rnd(strikes: np.ndarray, F: float, T: float,
               params: Dict[str, float]) -> np.ndarray:
@@ -133,6 +189,7 @@ def model_rnd(strikes: np.ndarray, F: float, T: float,
                                    beta=params['beta'],
                                    rho=params['rho'],
                                    nu=params['nu'])
-    rnd = np.gradient(np.gradient(model_prices, strikes), strikes)
+    rnd_raw = np.gradient(np.gradient(model_prices, strikes), strikes)
+    rnd = np.clip(rnd_raw, a_min=0.0, a_max=None)
     area = np.trapezoid(rnd, strikes)
     return rnd / area
