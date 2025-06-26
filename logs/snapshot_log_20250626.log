@@ -1,0 +1,41 @@
+2025-06-26 09:16:07,614 [INFO] [SFRU5] total tickers: 606
+2025-06-26 09:16:08,684 [INFO] [SAVE] SFRN5 \u2192 SFRN5_jul.parquet
+2025-06-26 09:16:09,473 [INFO] [SAVE] SFRQ5 \u2192 SFRQ5_aug.parquet
+2025-06-26 09:16:10,360 [INFO] [SAVE] SFRU5 \u2192 SFRU5_sep.parquet
+2025-06-26 09:16:10,579 [INFO] [SFRZ5] total tickers: 584
+2025-06-26 09:16:11,509 [INFO] [SAVE] SFRV5 \u2192 SFRV5_oct.parquet
+2025-06-26 09:16:12,310 [INFO] [SAVE] SFRX5 \u2192 SFRX5_nov.parquet
+2025-06-26 09:16:13,210 [INFO] [SAVE] SFRZ5 \u2192 SFRZ5_dec.parquet
+2025-06-26 09:16:13,350 [INFO] [SFRH6] total tickers: 218
+2025-06-26 09:16:14,387 [INFO] [SAVE] SFRH6 \u2192 SFRH6_mar.parquet
+2025-06-26 09:16:14,552 [INFO] [SFRM6] total tickers: 206
+2025-06-26 09:16:15,534 [INFO] [SAVE] SFRM6 \u2192 SFRM6_jun.parquet
+2025-06-26 09:16:15,654 [INFO] [SFRU6] total tickers: 146
+2025-06-26 09:16:16,601 [INFO] [SAVE] SFRU6 \u2192 SFRU6_sep.parquet
+2025-06-26 09:16:16,728 [INFO] [SFRZ6] total tickers: 150
+2025-06-26 09:16:17,602 [INFO] [SAVE] SFRZ6 \u2192 SFRZ6_dec.parquet
+2025-06-26 09:16:17,738 [INFO] [SFRH7] total tickers: 142
+2025-06-26 09:16:18,578 [INFO] [SAVE] SFRH7 \u2192 SFRH7_mar.parquet
+2025-06-26 09:16:18,714 [INFO] [SFRM7] total tickers: 140
+2025-06-26 09:16:19,537 [INFO] [SAVE] SFRM7 \u2192 SFRM7_jun.parquet
+2025-06-26 09:16:19,716 [INFO] [SFRU7] total tickers: 140
+2025-06-26 09:16:20,577 [INFO] [SAVE] SFRU7 \u2192 SFRU7_sep.parquet
+2025-06-26 09:16:20,737 [INFO] [SFRZ7] total tickers: 136
+2025-06-26 09:16:21,641 [INFO] [SAVE] SFRZ7 \u2192 SFRZ7_dec.parquet
+2025-06-26 09:16:21,780 [INFO] [SFRH8] total tickers: 136
+2025-06-26 09:16:22,663 [WARNING] SFRH8: missing columns ['bid', 'ask'], dropping this chain.
+2025-06-26 09:16:22,815 [INFO] [SFRM8] total tickers: 136
+2025-06-26 09:16:23,603 [WARNING] SFRM8: missing columns ['bid', 'ask'], dropping this chain.
+2025-06-26 09:16:23,736 [INFO] [SFRU28] total tickers: 136
+2025-06-26 09:16:24,507 [WARNING] SFRU8: missing columns ['bid', 'ask'], dropping this chain.
+2025-06-26 09:16:24,644 [INFO] [SFRZ28] total tickers: 130
+2025-06-26 09:16:25,595 [WARNING] SFRZ8: missing columns ['bid'], dropping this chain.
+2025-06-26 09:16:25,734 [INFO] [SFRH29] total tickers: 124
+2025-06-26 09:16:26,557 [WARNING] SFRH9: missing columns ['bid', 'ask'], dropping this chain.
+2025-06-26 09:16:26,699 [INFO] [SFRM29] total tickers: 118
+2025-06-26 09:16:27,562 [WARNING] SFRM9: missing columns ['bid', 'ask'], dropping this chain.
+2025-06-26 09:16:27,698 [WARNING] SFRU29: OPT_CHAIN is empty.
+2025-06-26 09:16:27,825 [WARNING] SFRZ29: OPT_CHAIN is empty.
+2025-06-26 09:16:27,826 [INFO] [SUMMARY] Total futures scanned: 18
+2025-06-26 09:16:27,826 [INFO] [SUMMARY] Output written to: snapshots/20250626/091516
+2025-06-26 09:16:27,826 [INFO] [DONE] Snapshot job complete.

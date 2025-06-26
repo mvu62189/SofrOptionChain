@@ -148,14 +148,14 @@ def process_snapshot_file(parquet_path, manual_params):
     # Automatic calibration
     params_fast, iv_model_fit, debug_data = fit_sabr(strikes_fit, F, T, vols_fit, method='fast')
     
-    # --- THIS IS THE CORRECTED SECTION FOR MANUAL CALIBRATION ---
+    # ---  MANUAL CALIBRATION ---
     params_man, iv_manual = (None, None) # Initialize iv_manual as None for plotting
     if recalibrate and st.session_state.get('manual_file') == parquet_path:
         # Correctly unpack the 3-item tuple returned by fit_sabr
         manual_results = fit_sabr(strikes_fit, F, T, vols_fit, method='fast', manual_params=manual_params)
         
         if manual_results and len(manual_results) == 3:
-            params_man, iv_manual_fit, _ = manual_results
+            params_man, iv_manual_fit, debug_data = manual_results
             
             # Interpolate the manual IV from the fit grid back to the main strike grid
             if iv_manual_fit is not None and len(iv_manual_fit) > 0:
@@ -223,7 +223,7 @@ if st.session_state.get("refresh_rnd", True):
     show_model_rnd  = st.checkbox("Show SABR RND",      value=True,   key="toggle_model_rnd")
     show_manual_rnd = st.checkbox("Show Manual RND",    value=False,  key="toggle_manual_rnd")
 
-    fig2 = plot_rnd(results, rnd_visible)
+    fig2 = plot_rnd(results, rnd_visible, show_mkt_rnd, show_model_rnd, show_manual_rnd)
     st.pyplot(fig2, clear_figure=True)
 
 # --- 7. Debug & parameter tables ---

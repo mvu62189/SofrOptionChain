@@ -2,7 +2,7 @@
 import numpy as np
 import pandas as pd
 from scipy.optimize import minimize
-from scipy.interpolate import CubicSpline
+from scipy.interpolate import CubicSpline, make_interp_spline, UnivariateSpline
 from typing import Tuple, Dict
 from sabr_v2 import calibrate_sabr_full, calibrate_sabr_fast, sabr_vol_normal, sabr_vol_lognormal
 from sabr_v2 import b76_vega
@@ -274,8 +274,32 @@ def fit_sabr(strikes: np.ndarray, F: float, T: float,
 
     # --- 1. Interpolation Step ---
     # Create a smooth, continuous function (cubic spline) from the discrete market points.
-    vol_spline = CubicSpline(strikes, vols, bc_type='natural')
-
+   
+    #vol_spline = CubicSpline(strikes, vols, bc_type='natural')
+    #vol_spline = make_interp_spline(strikes, vols, k=3)
+        # --- 1. Weighted Smoothing Spline Step ---
+    
+    # --- a) Define weights to clamp the fit at the ATM region ---
+    # We use a Gaussian function to create smoothly decaying weights away from the forward price F.
+    # The 'sigma' parameter controls how quickly the weights fall off. A smaller sigma means a tighter clamp.
+    sigma = 0.10 * F  # Example: 5% of the forward price. Tune this as needed.
+    weights = np.exp(-0.5 * ((strikes - F) / sigma)**2)
+    # Give a huge boost to the point(s) closest to ATM to ensure a near-perfect fit there.
+    atm_idx = np.abs(strikes - F).argmin()
+    weights[atm_idx] = 100.0 # A very high weight for the closest point
+    
+    # --- b) Define the smoothing factor 's' ---
+    # 's' controls the trade-off between smoothness and fitting the data points.
+    # s=0 means interpolation (pass through all points).
+    # A larger 's' creates a smoother curve. We start with a small value.
+    # This is a heuristic and may require tuning.
+    s = len(vols) * np.var(vols) * 0.01 
+    
+    # --- c) Create the weighted smoothing B-spline ---
+    # UnivariateSpline creates a B-spline representation.
+    # It minimizes: sum(w[i] * (y[i] - spline(x[i]))**2) + s * integral(spline''(x)**2 dx)
+    vol_spline = UnivariateSpline(strikes, vols, w=weights, s=s, k=3)
+ 
     # Create a new, fine-grained grid of strikes for calibration.
     # Using more points makes the calibration more robust.
     fine_strikes = np.arange(strikes.min(), strikes.max(), 0.0625)

@@ -98,7 +98,7 @@ def plot_vol_smile(results: dict, vol_visible: dict, show_mkt_iv, show_model_iv,
     
     return fig
 
-def plot_rnd(results: dict, rnd_visible: dict) -> plt.Figure:
+def plot_rnd(results: dict, rnd_visible: dict, show_mkt_rnd: bool, show_model_rnd: bool, show_manual_rnd: bool) -> plt.Figure:
     """
     Create a Risk-Neutral Density plot from `results`.
     `rnd_visible[fname]` toggles visibility for each file.
@@ -108,9 +108,13 @@ def plot_rnd(results: dict, rnd_visible: dict) -> plt.Figure:
         if not res or not rnd_visible.get(fname):
             continue
         label = os.path.basename(fname)
-        ax.plot(res['strikes'], res['rnd_market'], marker='o', linestyle='-', label=f"Market RND ({label})")
-        ax.plot(res['strikes'], res['rnd_sabr'],   marker='x', linestyle='--', label=f"SABR RND ({label})")
-        if res.get('rnd_manual') is not None:
+        if show_mkt_rnd:
+            ax.plot(res['strikes'], res['rnd_market'], marker='o', linestyle='-', label=f"Market RND ({label})")
+        
+        if show_model_rnd:
+            ax.plot(res['strikes'], res['rnd_sabr'],   marker='x', linestyle='--', label=f"SABR RND ({label})")
+        
+        if show_manual_rnd and res.get('rnd_manual') is not None:
             ax.plot(res['strikes'], res['rnd_manual'], marker='s', linestyle=':', label=f"Manual RND ({label})")
     ax.set_xlabel("Strike")
     ax.set_ylabel("RND (normalized)")
