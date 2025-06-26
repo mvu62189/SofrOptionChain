@@ -1,0 +1,340 @@
+2025-06-15 18:16:07,909 [INFO] [START] Snapshot job running...
+2025-06-15 18:16:08,182 [WARNING] No security column for SFRM5
+2025-06-15 18:16:09,750 [INFO] [COVERAGE] SFRU5 - BID present in 181 / 606 rows
+2025-06-15 18:16:09,750 [INFO] [COVERAGE] SFRU5 - ASK present in 379 / 606 rows
+2025-06-15 18:16:11,390 [INFO] [COVERAGE] SFRZ5 - BID present in 233 / 584 rows
+2025-06-15 18:16:11,390 [INFO] [COVERAGE] SFRZ5 - ASK present in 396 / 584 rows
+2025-06-15 18:16:12,814 [INFO] [COVERAGE] SFRH6 - BID present in 113 / 218 rows
+2025-06-15 18:16:12,814 [INFO] [COVERAGE] SFRH6 - ASK present in 154 / 218 rows
+2025-06-15 18:16:14,289 [INFO] [COVERAGE] SFRM6 - BID present in 119 / 204 rows
+2025-06-15 18:16:14,289 [INFO] [COVERAGE] SFRM6 - ASK present in 150 / 204 rows
+2025-06-15 18:16:15,693 [INFO] [COVERAGE] SFRU6 - BID present in 77 / 146 rows
+2025-06-15 18:16:15,694 [INFO] [COVERAGE] SFRU6 - ASK present in 103 / 146 rows
+2025-06-15 18:16:17,195 [INFO] [COVERAGE] SFRZ6 - BID present in 81 / 150 rows
+2025-06-15 18:16:17,196 [INFO] [COVERAGE] SFRZ6 - ASK present in 105 / 150 rows
+2025-06-15 18:16:18,641 [INFO] [COVERAGE] SFRH7 - BID present in 84 / 142 rows
+2025-06-15 18:16:18,641 [INFO] [COVERAGE] SFRH7 - ASK present in 106 / 142 rows
+2025-06-15 18:16:20,122 [INFO] [COVERAGE] SFRM7 - BID present in 79 / 140 rows
+2025-06-15 18:16:20,122 [INFO] [COVERAGE] SFRM7 - ASK present in 107 / 140 rows
+2025-06-15 18:16:21,477 [INFO] [COVERAGE] SFRU7 - BID present in 82 / 140 rows
+2025-06-15 18:16:21,478 [INFO] [COVERAGE] SFRU7 - ASK present in 108 / 140 rows
+2025-06-15 18:16:22,855 [INFO] [COVERAGE] SFRZ7 - BID present in 82 / 136 rows
+2025-06-15 18:16:22,855 [INFO] [COVERAGE] SFRZ7 - ASK present in 106 / 136 rows
+2025-06-15 18:16:24,193 [INFO] [COVERAGE] SFRH8 - BID present in 0 / 136 rows
+2025-06-15 18:16:24,194 [INFO] [COVERAGE] SFRH8 - ASK present in 0 / 136 rows
+2025-06-15 18:16:25,655 [INFO] [COVERAGE] SFRM8 - BID present in 0 / 136 rows
+2025-06-15 18:16:25,656 [INFO] [COVERAGE] SFRM8 - ASK present in 0 / 136 rows
+2025-06-15 18:16:27,158 [INFO] [COVERAGE] SFRU28 - BID present in 0 / 136 rows
+2025-06-15 18:16:27,159 [INFO] [COVERAGE] SFRU28 - ASK present in 0 / 136 rows
+2025-06-15 18:16:28,571 [INFO] [COVERAGE] SFRZ28 - BID present in 0 / 130 rows
+2025-06-15 18:16:28,571 [INFO] [COVERAGE] SFRZ28 - ASK present in 1 / 130 rows
+2025-06-15 18:16:30,032 [INFO] [COVERAGE] SFRH29 - BID present in 0 / 124 rows
+2025-06-15 18:16:30,033 [INFO] [COVERAGE] SFRH29 - ASK present in 0 / 124 rows
+2025-06-15 18:16:30,093 [INFO] Saved to cache.
+2025-06-15 18:16:30,099 [INFO] Archived snapshots at 181630.
+2025-06-15 18:16:30,100 [INFO] [READY] Snapshot available for analytics engine.
+2025-06-15 18:35:48,668 [INFO] [START] Snapshot job running...
+2025-06-15 18:35:48,861 [WARNING] No security column for SFRM5
+2025-06-15 18:35:50,629 [INFO] [COVERAGE] SFRU5 - BID present in 187 / 606 rows
+2025-06-15 18:35:50,630 [INFO] [COVERAGE] SFRU5 - ASK present in 377 / 606 rows
+2025-06-15 18:35:52,493 [INFO] [COVERAGE] SFRZ5 - BID present in 241 / 584 rows
+2025-06-15 18:35:52,494 [INFO] [COVERAGE] SFRZ5 - ASK present in 396 / 584 rows
+2025-06-15 18:35:54,057 [INFO] [COVERAGE] SFRH6 - BID present in 116 / 218 rows
+2025-06-15 18:35:54,057 [INFO] [COVERAGE] SFRH6 - ASK present in 154 / 218 rows
+2025-06-15 18:35:55,727 [INFO] [COVERAGE] SFRM6 - BID present in 120 / 204 rows
+2025-06-15 18:35:55,728 [INFO] [COVERAGE] SFRM6 - ASK present in 150 / 204 rows
+2025-06-15 18:35:57,240 [INFO] [COVERAGE] SFRU6 - BID present in 78 / 146 rows
+2025-06-15 18:35:57,241 [INFO] [COVERAGE] SFRU6 - ASK present in 103 / 146 rows
+2025-06-15 18:35:58,979 [INFO] [COVERAGE] SFRZ6 - BID present in 83 / 150 rows
+2025-06-15 18:35:58,980 [INFO] [COVERAGE] SFRZ6 - ASK present in 105 / 150 rows
+2025-06-15 18:36:00,614 [INFO] [COVERAGE] SFRH7 - BID present in 85 / 142 rows
+2025-06-15 18:36:00,615 [INFO] [COVERAGE] SFRH7 - ASK present in 106 / 142 rows
+2025-06-15 18:36:02,122 [INFO] [COVERAGE] SFRM7 - BID present in 78 / 140 rows
+2025-06-15 18:36:02,123 [INFO] [COVERAGE] SFRM7 - ASK present in 106 / 140 rows
+2025-06-15 18:36:03,774 [INFO] [COVERAGE] SFRU7 - BID present in 82 / 140 rows
+2025-06-15 18:36:03,774 [INFO] [COVERAGE] SFRU7 - ASK present in 108 / 140 rows
+2025-06-15 18:36:05,455 [INFO] [COVERAGE] SFRZ7 - BID present in 82 / 136 rows
+2025-06-15 18:36:05,455 [INFO] [COVERAGE] SFRZ7 - ASK present in 106 / 136 rows
+2025-06-15 18:36:07,126 [INFO] [COVERAGE] SFRH8 - BID present in 0 / 136 rows
+2025-06-15 18:36:07,126 [INFO] [COVERAGE] SFRH8 - ASK present in 0 / 136 rows
+2025-06-15 18:36:08,808 [INFO] [COVERAGE] SFRM8 - BID present in 0 / 136 rows
+2025-06-15 18:36:08,808 [INFO] [COVERAGE] SFRM8 - ASK present in 0 / 136 rows
+2025-06-15 18:36:10,442 [INFO] [COVERAGE] SFRU28 - BID present in 0 / 136 rows
+2025-06-15 18:36:10,443 [INFO] [COVERAGE] SFRU28 - ASK present in 0 / 136 rows
+2025-06-15 18:36:12,050 [INFO] [COVERAGE] SFRZ28 - BID present in 0 / 130 rows
+2025-06-15 18:36:12,050 [INFO] [COVERAGE] SFRZ28 - ASK present in 1 / 130 rows
+2025-06-15 18:36:13,782 [INFO] [COVERAGE] SFRH29 - BID present in 0 / 124 rows
+2025-06-15 18:36:13,783 [INFO] [COVERAGE] SFRH29 - ASK present in 0 / 124 rows
+2025-06-15 18:36:13,823 [INFO] Saved to cache.
+2025-06-15 18:36:13,829 [INFO] Archived snapshots at 183613.
+2025-06-15 18:36:13,829 [INFO] [READY] Snapshot available for analytics engine.
+2025-06-15 19:06:59,886 [INFO] [START] Snapshot job running...
+2025-06-15 19:07:00,138 [WARNING] No security column for SFRM5
+2025-06-15 19:07:01,660 [ERROR] Snapshot pull failed for SFRU5: "['opt_expire_dt', 'ps_fx_opt_expiration_date', 'fxopt_expiry_date'] not in index"
+2025-06-15 19:07:02,661 [ERROR] Snapshot pull failed for SFRZ5: "['opt_expire_dt', 'ps_fx_opt_expiration_date', 'fxopt_expiry_date'] not in index"
+2025-06-15 19:07:03,631 [ERROR] Snapshot pull failed for SFRH6: "['opt_expire_dt', 'ps_fx_opt_expiration_date', 'fxopt_expiry_date'] not in index"
+2025-06-15 19:07:04,599 [ERROR] Snapshot pull failed for SFRM6: "['opt_expire_dt', 'ps_fx_opt_expiration_date', 'fxopt_expiry_date'] not in index"
+2025-06-15 19:07:05,572 [ERROR] Snapshot pull failed for SFRU6: "['opt_expire_dt', 'ps_fx_opt_expiration_date', 'fxopt_expiry_date'] not in index"
+2025-06-15 19:07:06,536 [ERROR] Snapshot pull failed for SFRZ6: "['opt_expire_dt', 'ps_fx_opt_expiration_date', 'fxopt_expiry_date'] not in index"
+2025-06-15 19:07:07,439 [ERROR] Snapshot pull failed for SFRH7: "['opt_expire_dt', 'ps_fx_opt_expiration_date', 'fxopt_expiry_date'] not in index"
+2025-06-15 19:07:08,407 [ERROR] Snapshot pull failed for SFRM7: "['opt_expire_dt', 'ps_fx_opt_expiration_date', 'fxopt_expiry_date'] not in index"
+2025-06-15 19:07:09,356 [ERROR] Snapshot pull failed for SFRU7: "['opt_expire_dt', 'ps_fx_opt_expiration_date', 'fxopt_expiry_date'] not in index"
+2025-06-15 19:07:10,280 [ERROR] Snapshot pull failed for SFRZ7: "['opt_expire_dt', 'ps_fx_opt_expiration_date', 'fxopt_expiry_date'] not in index"
+2025-06-15 19:07:11,181 [ERROR] Snapshot pull failed for SFRH8: "['opt_expire_dt', 'ps_fx_opt_expiration_date', 'fxopt_expiry_date'] not in index"
+2025-06-15 19:07:12,119 [ERROR] Snapshot pull failed for SFRM8: "['opt_expire_dt', 'ps_fx_opt_expiration_date', 'fxopt_expiry_date'] not in index"
+2025-06-15 19:07:13,065 [ERROR] Snapshot pull failed for SFRU28: "['opt_expire_dt', 'ps_fx_opt_expiration_date', 'fxopt_expiry_date'] not in index"
+2025-06-15 19:07:14,023 [ERROR] Snapshot pull failed for SFRZ28: "['opt_expire_dt', 'ps_fx_opt_expiration_date', 'fxopt_expiry_date'] not in index"
+2025-06-15 19:07:14,973 [ERROR] Snapshot pull failed for SFRH29: "['opt_expire_dt', 'ps_fx_opt_expiration_date', 'fxopt_expiry_date'] not in index"
+2025-06-15 19:07:14,973 [WARNING] No snapshot data gathered.
+2025-06-15 19:08:47,580 [INFO] [START] Snapshot job running...
+2025-06-15 19:08:47,750 [WARNING] No security column for SFRM5
+2025-06-15 19:08:49,269 [INFO] [COVERAGE] SFRU5 - BID present in 281 / 606 rows
+2025-06-15 19:08:49,269 [INFO] [COVERAGE] SFRU5 - ASK present in 464 / 606 rows
+2025-06-15 19:08:51,020 [INFO] [COVERAGE] SFRZ5 - BID present in 366 / 584 rows
+2025-06-15 19:08:51,021 [INFO] [COVERAGE] SFRZ5 - ASK present in 490 / 584 rows
+2025-06-15 19:08:52,508 [INFO] [COVERAGE] SFRH6 - BID present in 145 / 218 rows
+2025-06-15 19:08:52,508 [INFO] [COVERAGE] SFRH6 - ASK present in 181 / 218 rows
+2025-06-15 19:08:53,972 [INFO] [COVERAGE] SFRM6 - BID present in 149 / 204 rows
+2025-06-15 19:08:53,972 [INFO] [COVERAGE] SFRM6 - ASK present in 178 / 204 rows
+2025-06-15 19:08:55,382 [INFO] [COVERAGE] SFRU6 - BID present in 100 / 146 rows
+2025-06-15 19:08:55,382 [INFO] [COVERAGE] SFRU6 - ASK present in 123 / 146 rows
+2025-06-15 19:08:56,828 [INFO] [COVERAGE] SFRZ6 - BID present in 102 / 150 rows
+2025-06-15 19:08:56,829 [INFO] [COVERAGE] SFRZ6 - ASK present in 124 / 150 rows
+2025-06-15 19:08:58,250 [INFO] [COVERAGE] SFRH7 - BID present in 98 / 142 rows
+2025-06-15 19:08:58,251 [INFO] [COVERAGE] SFRH7 - ASK present in 118 / 142 rows
+2025-06-15 19:08:59,676 [INFO] [COVERAGE] SFRM7 - BID present in 78 / 140 rows
+2025-06-15 19:08:59,677 [INFO] [COVERAGE] SFRM7 - ASK present in 106 / 140 rows
+2025-06-15 19:09:01,271 [INFO] [COVERAGE] SFRU7 - BID present in 82 / 140 rows
+2025-06-15 19:09:01,272 [INFO] [COVERAGE] SFRU7 - ASK present in 108 / 140 rows
+2025-06-15 19:09:02,747 [INFO] [COVERAGE] SFRZ7 - BID present in 82 / 136 rows
+2025-06-15 19:09:02,747 [INFO] [COVERAGE] SFRZ7 - ASK present in 106 / 136 rows
+2025-06-15 19:09:04,215 [INFO] [COVERAGE] SFRH8 - BID present in 0 / 136 rows
+2025-06-15 19:09:04,216 [INFO] [COVERAGE] SFRH8 - ASK present in 0 / 136 rows
+2025-06-15 19:09:05,736 [INFO] [COVERAGE] SFRM8 - BID present in 0 / 136 rows
+2025-06-15 19:09:05,738 [INFO] [COVERAGE] SFRM8 - ASK present in 0 / 136 rows
+2025-06-15 19:09:07,160 [INFO] [COVERAGE] SFRU28 - BID present in 0 / 136 rows
+2025-06-15 19:09:07,160 [INFO] [COVERAGE] SFRU28 - ASK present in 0 / 136 rows
+2025-06-15 19:09:08,643 [INFO] [COVERAGE] SFRZ28 - BID present in 0 / 130 rows
+2025-06-15 19:09:08,644 [INFO] [COVERAGE] SFRZ28 - ASK present in 1 / 130 rows
+2025-06-15 19:09:10,145 [INFO] [COVERAGE] SFRH29 - BID present in 0 / 124 rows
+2025-06-15 19:09:10,145 [INFO] [COVERAGE] SFRH29 - ASK present in 0 / 124 rows
+2025-06-15 19:09:10,186 [INFO] Saved to cache.
+2025-06-15 19:09:10,193 [INFO] Archived snapshots at 190910.
+2025-06-15 19:09:10,193 [INFO] [READY] Snapshot available for analytics engine.
+2025-06-15 19:16:46,723 [INFO] [START] Snapshot job running...
+2025-06-15 19:16:46,946 [WARNING] No security column for SFRM5
+2025-06-15 19:16:48,422 [INFO] [COVERAGE] SFRU5 - BID present in 281 / 606 rows
+2025-06-15 19:16:48,422 [INFO] [COVERAGE] SFRU5 - ASK present in 464 / 606 rows
+2025-06-15 19:16:49,961 [INFO] [COVERAGE] SFRZ5 - BID present in 366 / 584 rows
+2025-06-15 19:16:49,962 [INFO] [COVERAGE] SFRZ5 - ASK present in 490 / 584 rows
+2025-06-15 19:16:51,364 [INFO] [COVERAGE] SFRH6 - BID present in 145 / 218 rows
+2025-06-15 19:16:51,365 [INFO] [COVERAGE] SFRH6 - ASK present in 181 / 218 rows
+2025-06-15 19:16:52,858 [INFO] [COVERAGE] SFRM6 - BID present in 149 / 204 rows
+2025-06-15 19:16:52,858 [INFO] [COVERAGE] SFRM6 - ASK present in 178 / 204 rows
+2025-06-15 19:16:54,256 [INFO] [COVERAGE] SFRU6 - BID present in 100 / 146 rows
+2025-06-15 19:16:54,257 [INFO] [COVERAGE] SFRU6 - ASK present in 123 / 146 rows
+2025-06-15 19:16:55,653 [INFO] [COVERAGE] SFRZ6 - BID present in 102 / 150 rows
+2025-06-15 19:16:55,653 [INFO] [COVERAGE] SFRZ6 - ASK present in 124 / 150 rows
+2025-06-15 19:16:57,084 [INFO] [COVERAGE] SFRH7 - BID present in 98 / 142 rows
+2025-06-15 19:16:57,085 [INFO] [COVERAGE] SFRH7 - ASK present in 118 / 142 rows
+2025-06-15 19:16:58,534 [INFO] [COVERAGE] SFRM7 - BID present in 78 / 140 rows
+2025-06-15 19:16:58,534 [INFO] [COVERAGE] SFRM7 - ASK present in 106 / 140 rows
+2025-06-15 19:16:59,957 [INFO] [COVERAGE] SFRU7 - BID present in 82 / 140 rows
+2025-06-15 19:16:59,957 [INFO] [COVERAGE] SFRU7 - ASK present in 108 / 140 rows
+2025-06-15 19:17:01,472 [INFO] [COVERAGE] SFRZ7 - BID present in 82 / 136 rows
+2025-06-15 19:17:01,472 [INFO] [COVERAGE] SFRZ7 - ASK present in 106 / 136 rows
+2025-06-15 19:17:02,868 [INFO] [COVERAGE] SFRH8 - BID present in 0 / 136 rows
+2025-06-15 19:17:02,869 [INFO] [COVERAGE] SFRH8 - ASK present in 0 / 136 rows
+2025-06-15 19:17:04,299 [INFO] [COVERAGE] SFRM8 - BID present in 0 / 136 rows
+2025-06-15 19:17:04,299 [INFO] [COVERAGE] SFRM8 - ASK present in 0 / 136 rows
+2025-06-15 19:17:05,748 [INFO] [COVERAGE] SFRU28 - BID present in 0 / 136 rows
+2025-06-15 19:17:05,748 [INFO] [COVERAGE] SFRU28 - ASK present in 0 / 136 rows
+2025-06-15 19:17:07,245 [INFO] [COVERAGE] SFRZ28 - BID present in 0 / 130 rows
+2025-06-15 19:17:07,245 [INFO] [COVERAGE] SFRZ28 - ASK present in 1 / 130 rows
+2025-06-15 19:17:08,719 [INFO] [COVERAGE] SFRH29 - BID present in 0 / 124 rows
+2025-06-15 19:17:08,719 [INFO] [COVERAGE] SFRH29 - ASK present in 0 / 124 rows
+2025-06-15 19:17:08,762 [INFO] Saved to cache.
+2025-06-15 19:17:08,769 [INFO] Archived snapshots at 191708.
+2025-06-15 19:17:08,769 [INFO] [READY] Snapshot available for analytics engine.
+2025-06-15 20:27:34,861 [ERROR] Ticker fetch failed for SFRM5: list index out of range
+2025-06-15 20:27:35,082 [INFO] [SFRU5] total tickers: 606
+2025-06-15 20:27:35,920 [INFO] [SAVE] SFRN5 \u2192 SFRN5_jul.parquet
+2025-06-15 20:27:36,666 [INFO] [SAVE] SFRQ5 \u2192 SFRQ5_aug.parquet
+2025-06-15 20:27:37,413 [INFO] [SAVE] SFRU5 \u2192 SFRU5_sep.parquet
+2025-06-15 20:27:37,610 [INFO] [SFRZ5] total tickers: 584
+2025-06-15 20:27:38,402 [INFO] [SAVE] SFRV5 \u2192 SFRV5_oct.parquet
+2025-06-15 20:27:39,124 [INFO] [SAVE] SFRX5 \u2192 SFRX5_nov.parquet
+2025-06-15 20:27:39,805 [INFO] [SAVE] SFRZ5 \u2192 SFRZ5_dec.parquet
+2025-06-15 20:27:39,941 [INFO] [SFRH6] total tickers: 218
+2025-06-15 20:27:40,719 [INFO] [SAVE] SFRH6 \u2192 SFRH6_mar.parquet
+2025-06-15 20:27:40,848 [INFO] [SFRM6] total tickers: 204
+2025-06-15 20:27:41,631 [INFO] [SAVE] SFRM6 \u2192 SFRM6_jun.parquet
+2025-06-15 20:27:41,774 [INFO] [SFRU6] total tickers: 146
+2025-06-15 20:27:42,595 [INFO] [SAVE] SFRU6 \u2192 SFRU6_sep.parquet
+2025-06-15 20:27:42,745 [INFO] [SFRZ6] total tickers: 150
+2025-06-15 20:27:43,534 [INFO] [SAVE] SFRZ6 \u2192 SFRZ6_dec.parquet
+2025-06-15 20:27:43,670 [INFO] [SFRH7] total tickers: 142
+2025-06-15 20:27:44,465 [INFO] [SAVE] SFRH7 \u2192 SFRH7_mar.parquet
+2025-06-15 20:27:44,587 [INFO] [SFRM7] total tickers: 140
+2025-06-15 20:27:45,412 [INFO] [SAVE] SFRM7 \u2192 SFRM7_jun.parquet
+2025-06-15 20:27:45,570 [INFO] [SFRU7] total tickers: 140
+2025-06-15 20:27:46,351 [INFO] [SAVE] SFRU7 \u2192 SFRU7_sep.parquet
+2025-06-15 20:27:46,477 [INFO] [SFRZ7] total tickers: 136
+2025-06-15 20:27:47,266 [INFO] [SAVE] SFRZ7 \u2192 SFRZ7_dec.parquet
+2025-06-15 20:27:47,412 [INFO] [SFRH8] total tickers: 136
+2025-06-15 20:52:58,048 [INFO] [SFRU5] total tickers: 606
+2025-06-15 20:52:58,818 [INFO] [SAVE] SFRN5 \u2192 SFRN5_jul.parquet
+2025-06-15 20:53:00,093 [INFO] [SAVE] SFRQ5 \u2192 SFRQ5_aug.parquet
+2025-06-15 20:53:01,094 [INFO] [SAVE] SFRU5 \u2192 SFRU5_sep.parquet
+2025-06-15 20:53:01,274 [INFO] [SFRZ5] total tickers: 584
+2025-06-15 20:53:02,106 [INFO] [SAVE] SFRV5 \u2192 SFRV5_oct.parquet
+2025-06-15 20:53:02,811 [INFO] [SAVE] SFRX5 \u2192 SFRX5_nov.parquet
+2025-06-15 20:53:03,538 [INFO] [SAVE] SFRZ5 \u2192 SFRZ5_dec.parquet
+2025-06-15 20:53:03,709 [INFO] [SFRH6] total tickers: 218
+2025-06-15 20:53:04,510 [INFO] [SAVE] SFRH6 \u2192 SFRH6_mar.parquet
+2025-06-15 20:53:04,641 [INFO] [SFRM6] total tickers: 204
+2025-06-15 20:53:05,436 [INFO] [SAVE] SFRM6 \u2192 SFRM6_jun.parquet
+2025-06-15 20:53:05,563 [INFO] [SFRU6] total tickers: 146
+2025-06-15 20:53:06,367 [INFO] [SAVE] SFRU6 \u2192 SFRU6_sep.parquet
+2025-06-15 20:53:06,511 [INFO] [SFRZ6] total tickers: 150
+2025-06-15 20:53:07,326 [INFO] [SAVE] SFRZ6 \u2192 SFRZ6_dec.parquet
+2025-06-15 20:53:07,449 [INFO] [SFRH7] total tickers: 142
+2025-06-15 20:53:08,273 [INFO] [SAVE] SFRH7 \u2192 SFRH7_mar.parquet
+2025-06-15 20:53:08,408 [INFO] [SFRM7] total tickers: 140
+2025-06-15 20:53:09,198 [INFO] [SAVE] SFRM7 \u2192 SFRM7_jun.parquet
+2025-06-15 20:53:09,355 [INFO] [SFRU7] total tickers: 140
+2025-06-15 20:53:10,185 [INFO] [SAVE] SFRU7 \u2192 SFRU7_sep.parquet
+2025-06-15 20:53:10,319 [INFO] [SFRZ7] total tickers: 136
+2025-06-15 20:53:11,089 [INFO] [SAVE] SFRZ7 \u2192 SFRZ7_dec.parquet
+2025-06-15 20:53:11,232 [INFO] [SFRH8] total tickers: 136
+2025-06-15 20:53:12,015 [WARNING] SFRH8: Missing 'bid' column in raw data — filling with 0.
+2025-06-15 20:53:12,016 [WARNING] SFRH8: Missing 'ask' column in raw data — filling with 0.
+2025-06-15 20:53:12,029 [INFO] [SAVE] SFRH8 \u2192 SFRH8_mar.parquet
+2025-06-15 20:53:12,160 [INFO] [SFRM8] total tickers: 136
+2025-06-15 20:53:12,979 [WARNING] SFRM8: Missing 'bid' column in raw data — filling with 0.
+2025-06-15 20:53:12,980 [WARNING] SFRM8: Missing 'ask' column in raw data — filling with 0.
+2025-06-15 20:53:12,990 [INFO] [SAVE] SFRM8 \u2192 SFRM8_jun.parquet
+2025-06-15 20:53:13,124 [INFO] [SFRU28] total tickers: 136
+2025-06-15 20:53:14,363 [WARNING] SFRU8: Missing 'bid' column in raw data — filling with 0.
+2025-06-15 20:53:14,364 [WARNING] SFRU8: Missing 'ask' column in raw data — filling with 0.
+2025-06-15 20:53:14,376 [INFO] [SAVE] SFRU8 \u2192 SFRU8_sep.parquet
+2025-06-15 20:53:14,491 [INFO] [SFRZ28] total tickers: 130
+2025-06-15 20:53:15,320 [WARNING] SFRZ8: Missing 'bid' column in raw data — filling with 0.
+2025-06-15 20:53:15,332 [INFO] [SAVE] SFRZ8 \u2192 SFRZ8_dec.parquet
+2025-06-15 20:53:15,466 [INFO] [SFRH29] total tickers: 124
+2025-06-15 20:53:16,262 [WARNING] SFRH9: Missing 'bid' column in raw data — filling with 0.
+2025-06-15 20:53:16,263 [WARNING] SFRH9: Missing 'ask' column in raw data — filling with 0.
+2025-06-15 20:53:16,276 [INFO] [SAVE] SFRH9 \u2192 SFRH9_mar.parquet
+2025-06-15 20:53:16,401 [INFO] [SFRM29] total tickers: 114
+2025-06-15 20:53:17,156 [WARNING] SFRM9: Missing 'bid' column in raw data — filling with 0.
+2025-06-15 20:53:17,157 [WARNING] SFRM9: Missing 'ask' column in raw data — filling with 0.
+2025-06-15 20:53:17,168 [INFO] [SAVE] SFRM9 \u2192 SFRM9_jun.parquet
+2025-06-15 20:53:17,276 [WARNING] SFRU29: OPT_CHAIN is empty.
+2025-06-15 20:53:17,390 [WARNING] SFRZ29: OPT_CHAIN is empty.
+2025-06-15 20:53:17,391 [INFO] [SUMMARY] Total futures scanned: 18
+2025-06-15 20:53:17,391 [INFO] [SUMMARY] Output written to: snapshots/20250615/205257
+2025-06-15 20:53:17,392 [INFO] [DONE] Snapshot job complete.
+2025-06-15 21:00:19,003 [INFO] [SFRU5] total tickers: 606
+2025-06-15 21:00:19,977 [INFO] [SAVE] SFRN5 \u2192 SFRN5_jul.parquet
+2025-06-15 21:00:20,824 [INFO] [SAVE] SFRQ5 \u2192 SFRQ5_aug.parquet
+2025-06-15 21:00:21,617 [INFO] [SAVE] SFRU5 \u2192 SFRU5_sep.parquet
+2025-06-15 21:00:21,819 [INFO] [SFRZ5] total tickers: 584
+2025-06-15 21:00:22,677 [INFO] [SAVE] SFRV5 \u2192 SFRV5_oct.parquet
+2025-06-15 21:00:23,545 [INFO] [SAVE] SFRX5 \u2192 SFRX5_nov.parquet
+2025-06-15 21:00:24,344 [INFO] [SAVE] SFRZ5 \u2192 SFRZ5_dec.parquet
+2025-06-15 21:00:24,499 [INFO] [SFRH6] total tickers: 218
+2025-06-15 21:00:26,034 [INFO] [SAVE] SFRH6 \u2192 SFRH6_mar.parquet
+2025-06-15 21:00:26,192 [INFO] [SFRM6] total tickers: 204
+2025-06-15 21:00:27,328 [INFO] [SAVE] SFRM6 \u2192 SFRM6_jun.parquet
+2025-06-15 21:00:27,475 [INFO] [SFRU6] total tickers: 146
+2025-06-15 21:00:28,339 [INFO] [SAVE] SFRU6 \u2192 SFRU6_sep.parquet
+2025-06-15 21:00:28,482 [INFO] [SFRZ6] total tickers: 150
+2025-06-15 21:00:29,519 [INFO] [SAVE] SFRZ6 \u2192 SFRZ6_dec.parquet
+2025-06-15 21:00:29,672 [INFO] [SFRH7] total tickers: 142
+2025-06-15 21:00:30,803 [INFO] [SAVE] SFRH7 \u2192 SFRH7_mar.parquet
+2025-06-15 21:00:30,942 [INFO] [SFRM7] total tickers: 140
+2025-06-15 21:00:31,786 [INFO] [SAVE] SFRM7 \u2192 SFRM7_jun.parquet
+2025-06-15 21:00:31,954 [INFO] [SFRU7] total tickers: 140
+2025-06-15 21:00:32,793 [INFO] [SAVE] SFRU7 \u2192 SFRU7_sep.parquet
+2025-06-15 21:00:32,954 [INFO] [SFRZ7] total tickers: 136
+2025-06-15 21:00:33,803 [INFO] [SAVE] SFRZ7 \u2192 SFRZ7_dec.parquet
+2025-06-15 21:00:33,975 [INFO] [SFRH8] total tickers: 136
+2025-06-15 21:00:34,813 [WARNING] SFRH8: Missing 'bid' column in raw data — filling with 0.
+2025-06-15 21:00:34,819 [WARNING] SFRH8: Missing 'ask' column in raw data — filling with 0.
+2025-06-15 21:00:34,832 [INFO] [SAVE] SFRH8 \u2192 SFRH8_mar.parquet
+2025-06-15 21:00:34,984 [INFO] [SFRM8] total tickers: 136
+2025-06-15 21:00:35,889 [WARNING] SFRM8: Missing 'bid' column in raw data — filling with 0.
+2025-06-15 21:00:35,893 [WARNING] SFRM8: Missing 'ask' column in raw data — filling with 0.
+2025-06-15 21:00:35,905 [INFO] [SAVE] SFRM8 \u2192 SFRM8_jun.parquet
+2025-06-15 21:00:36,035 [INFO] [SFRU28] total tickers: 136
+2025-06-15 21:00:36,872 [WARNING] SFRU8: Missing 'bid' column in raw data — filling with 0.
+2025-06-15 21:00:36,875 [WARNING] SFRU8: Missing 'ask' column in raw data — filling with 0.
+2025-06-15 21:00:36,888 [INFO] [SAVE] SFRU8 \u2192 SFRU8_sep.parquet
+2025-06-15 21:00:37,042 [INFO] [SFRZ28] total tickers: 130
+2025-06-15 21:00:37,915 [WARNING] SFRZ8: Missing 'bid' column in raw data — filling with 0.
+2025-06-15 21:00:37,929 [INFO] [SAVE] SFRZ8 \u2192 SFRZ8_dec.parquet
+2025-06-15 21:00:38,072 [INFO] [SFRH29] total tickers: 124
+2025-06-15 21:00:39,000 [WARNING] SFRH9: Missing 'bid' column in raw data — filling with 0.
+2025-06-15 21:00:39,002 [WARNING] SFRH9: Missing 'ask' column in raw data — filling with 0.
+2025-06-15 21:00:39,019 [INFO] [SAVE] SFRH9 \u2192 SFRH9_mar.parquet
+2025-06-15 21:00:39,183 [INFO] [SFRM29] total tickers: 114
+2025-06-15 21:00:40,104 [WARNING] SFRM9: Missing 'bid' column in raw data — filling with 0.
+2025-06-15 21:00:40,106 [WARNING] SFRM9: Missing 'ask' column in raw data — filling with 0.
+2025-06-15 21:00:40,122 [INFO] [SAVE] SFRM9 \u2192 SFRM9_jun.parquet
+2025-06-15 21:00:40,241 [WARNING] SFRU29: OPT_CHAIN is empty.
+2025-06-15 21:00:40,399 [WARNING] SFRZ29: OPT_CHAIN is empty.
+2025-06-15 21:00:40,400 [INFO] [SUMMARY] Total futures scanned: 18
+2025-06-15 21:00:40,400 [INFO] [SUMMARY] Output written to: snapshots/20250615/210018
+2025-06-15 21:00:40,400 [INFO] [DONE] Snapshot job complete.
+2025-06-15 21:00:45,941 [INFO] [SFRU5] total tickers: 606
+2025-06-15 21:00:46,801 [INFO] [SAVE] SFRN5 \u2192 SFRN5_jul.parquet
+2025-06-15 21:00:47,597 [INFO] [SAVE] SFRQ5 \u2192 SFRQ5_aug.parquet
+2025-06-15 21:00:48,351 [INFO] [SAVE] SFRU5 \u2192 SFRU5_sep.parquet
+2025-06-15 21:00:48,525 [INFO] [SFRZ5] total tickers: 584
+2025-06-15 21:00:49,350 [INFO] [SAVE] SFRV5 \u2192 SFRV5_oct.parquet
+2025-06-15 21:00:50,127 [INFO] [SAVE] SFRX5 \u2192 SFRX5_nov.parquet
+2025-06-15 21:00:50,887 [INFO] [SAVE] SFRZ5 \u2192 SFRZ5_dec.parquet
+2025-06-15 21:00:51,039 [INFO] [SFRH6] total tickers: 218
+2025-06-15 21:00:51,870 [INFO] [SAVE] SFRH6 \u2192 SFRH6_mar.parquet
+2025-06-15 21:00:51,988 [INFO] [SFRM6] total tickers: 204
+2025-06-15 21:00:52,810 [INFO] [SAVE] SFRM6 \u2192 SFRM6_jun.parquet
+2025-06-15 21:00:52,951 [INFO] [SFRU6] total tickers: 146
+2025-06-15 21:00:53,777 [INFO] [SAVE] SFRU6 \u2192 SFRU6_sep.parquet
+2025-06-15 21:00:53,913 [INFO] [SFRZ6] total tickers: 150
+2025-06-15 21:00:54,710 [INFO] [SAVE] SFRZ6 \u2192 SFRZ6_dec.parquet
+2025-06-15 21:00:54,882 [INFO] [SFRH7] total tickers: 142
+2025-06-15 21:00:55,840 [INFO] [SAVE] SFRH7 \u2192 SFRH7_mar.parquet
+2025-06-15 21:00:55,965 [INFO] [SFRM7] total tickers: 140
+2025-06-15 21:00:56,788 [INFO] [SAVE] SFRM7 \u2192 SFRM7_jun.parquet
+2025-06-15 21:00:56,953 [INFO] [SFRU7] total tickers: 140
+2025-06-15 21:00:57,813 [INFO] [SAVE] SFRU7 \u2192 SFRU7_sep.parquet
+2025-06-15 21:00:57,964 [INFO] [SFRZ7] total tickers: 136
+2025-06-15 21:00:58,837 [INFO] [SAVE] SFRZ7 \u2192 SFRZ7_dec.parquet
+2025-06-15 21:00:58,974 [INFO] [SFRH8] total tickers: 136
+2025-06-15 21:00:59,801 [WARNING] SFRH8: Missing 'bid' column in raw data — filling with 0.
+2025-06-15 21:00:59,805 [WARNING] SFRH8: Missing 'ask' column in raw data — filling with 0.
+2025-06-15 21:00:59,819 [INFO] [SAVE] SFRH8 \u2192 SFRH8_mar.parquet
+2025-06-15 21:00:59,958 [INFO] [SFRM8] total tickers: 136
+2025-06-15 21:01:01,135 [WARNING] SFRM8: Missing 'bid' column in raw data — filling with 0.
+2025-06-15 21:01:01,137 [WARNING] SFRM8: Missing 'ask' column in raw data — filling with 0.
+2025-06-15 21:01:01,149 [INFO] [SAVE] SFRM8 \u2192 SFRM8_jun.parquet
+2025-06-15 21:01:01,318 [INFO] [SFRU28] total tickers: 136
+2025-06-15 21:01:02,167 [WARNING] SFRU8: Missing 'bid' column in raw data — filling with 0.
+2025-06-15 21:01:02,169 [WARNING] SFRU8: Missing 'ask' column in raw data — filling with 0.
+2025-06-15 21:01:02,179 [INFO] [SAVE] SFRU8 \u2192 SFRU8_sep.parquet
+2025-06-15 21:01:02,303 [INFO] [SFRZ28] total tickers: 130
+2025-06-15 21:01:03,111 [WARNING] SFRZ8: Missing 'bid' column in raw data — filling with 0.
+2025-06-15 21:01:03,123 [INFO] [SAVE] SFRZ8 \u2192 SFRZ8_dec.parquet
+2025-06-15 21:01:03,247 [INFO] [SFRH29] total tickers: 124
+2025-06-15 21:01:04,104 [WARNING] SFRH9: Missing 'bid' column in raw data — filling with 0.
+2025-06-15 21:01:04,106 [WARNING] SFRH9: Missing 'ask' column in raw data — filling with 0.
+2025-06-15 21:01:04,119 [INFO] [SAVE] SFRH9 \u2192 SFRH9_mar.parquet
+2025-06-15 21:01:04,245 [INFO] [SFRM29] total tickers: 114
+2025-06-15 21:01:05,057 [WARNING] SFRM9: Missing 'bid' column in raw data — filling with 0.
+2025-06-15 21:01:05,059 [WARNING] SFRM9: Missing 'ask' column in raw data — filling with 0.
+2025-06-15 21:01:05,070 [INFO] [SAVE] SFRM9 \u2192 SFRM9_jun.parquet
+2025-06-15 21:01:05,195 [WARNING] SFRU29: OPT_CHAIN is empty.
+2025-06-15 21:01:05,310 [WARNING] SFRZ29: OPT_CHAIN is empty.
+2025-06-15 21:01:05,310 [INFO] [SUMMARY] Total futures scanned: 18
+2025-06-15 21:01:05,311 [INFO] [SUMMARY] Output written to: snapshots/20250615/210045
+2025-06-15 21:01:05,311 [INFO] [DONE] Snapshot job complete.

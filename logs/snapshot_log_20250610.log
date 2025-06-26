@@ -1,0 +1,41 @@
+2025-06-10 12:43:08,031 [INFO] [START] Snapshot job running...
+2025-06-10 12:43:10,299 [INFO] [COVERAGE] SFRM5 - BID present in 75 / 244 rows
+2025-06-10 12:43:10,299 [INFO] [COVERAGE] SFRM5 - ASK present in 196 / 244 rows
+2025-06-10 12:43:11,834 [INFO] [COVERAGE] SFRU5 - BID present in 278 / 606 rows
+2025-06-10 12:43:11,835 [INFO] [COVERAGE] SFRU5 - ASK present in 464 / 606 rows
+2025-06-10 12:43:13,373 [INFO] [COVERAGE] SFRZ5 - BID present in 379 / 584 rows
+2025-06-10 12:43:13,373 [INFO] [COVERAGE] SFRZ5 - ASK present in 490 / 584 rows
+2025-06-10 12:43:14,749 [INFO] [COVERAGE] SFRH6 - BID present in 150 / 218 rows
+2025-06-10 12:43:14,751 [INFO] [COVERAGE] SFRH6 - ASK present in 180 / 218 rows
+2025-06-10 12:43:16,125 [INFO] [COVERAGE] SFRM6 - BID present in 109 / 154 rows
+2025-06-10 12:43:16,126 [INFO] [COVERAGE] SFRM6 - ASK present in 131 / 154 rows
+2025-06-10 12:43:17,433 [INFO] [COVERAGE] SFRU6 - BID present in 107 / 146 rows
+2025-06-10 12:43:17,433 [INFO] [COVERAGE] SFRU6 - ASK present in 123 / 146 rows
+2025-06-10 12:43:18,894 [INFO] [COVERAGE] SFRZ6 - BID present in 111 / 150 rows
+2025-06-10 12:43:18,895 [INFO] [COVERAGE] SFRZ6 - ASK present in 124 / 150 rows
+2025-06-10 12:43:20,210 [INFO] [COVERAGE] SFRH7 - BID present in 107 / 142 rows
+2025-06-10 12:43:20,211 [INFO] [COVERAGE] SFRH7 - ASK present in 118 / 142 rows
+2025-06-10 12:43:21,561 [INFO] [COVERAGE] SFRM7 - BID present in 87 / 140 rows
+2025-06-10 12:43:21,562 [INFO] [COVERAGE] SFRM7 - ASK present in 106 / 140 rows
+2025-06-10 12:43:23,011 [INFO] [COVERAGE] SFRU7 - BID present in 90 / 140 rows
+2025-06-10 12:43:23,012 [INFO] [COVERAGE] SFRU7 - ASK present in 108 / 140 rows
+2025-06-10 12:43:24,332 [INFO] [COVERAGE] SFRZ7 - BID present in 89 / 136 rows
+2025-06-10 12:43:24,333 [INFO] [COVERAGE] SFRZ7 - ASK present in 105 / 136 rows
+2025-06-10 12:43:25,724 [INFO] [COVERAGE] SFRH8 - BID present in 0 / 136 rows
+2025-06-10 12:43:25,724 [INFO] [COVERAGE] SFRH8 - ASK present in 0 / 136 rows
+2025-06-10 12:43:27,283 [INFO] [COVERAGE] SFRM8 - BID present in 0 / 136 rows
+2025-06-10 12:43:27,283 [INFO] [COVERAGE] SFRM8 - ASK present in 0 / 136 rows
+2025-06-10 12:43:28,718 [INFO] [COVERAGE] SFRU28 - BID present in 0 / 136 rows
+2025-06-10 12:43:28,718 [INFO] [COVERAGE] SFRU28 - ASK present in 0 / 136 rows
+2025-06-10 12:43:30,222 [INFO] [COVERAGE] SFRZ28 - BID present in 0 / 130 rows
+2025-06-10 12:43:30,222 [INFO] [COVERAGE] SFRZ28 - ASK present in 1 / 130 rows
+2025-06-10 12:43:31,916 [INFO] [COVERAGE] SFRH29 - BID present in 0 / 124 rows
+2025-06-10 12:43:31,917 [INFO] [COVERAGE] SFRH29 - ASK present in 0 / 124 rows
+2025-06-10 12:43:31,967 [INFO] Saved to cache.
+2025-06-10 12:43:31,973 [INFO] Archived snapshots at 124331.
+2025-06-10 12:43:31,973 [INFO] [READY] Snapshot available for analytics engine.
+2025-06-10 16:08:36,501 [INFO] [START] Snapshot job running...
+2025-06-10 16:09:31,829 [ERROR] Fetching tickers failed for SFRM5: Cannot connect to Bloomberg
+2025-06-10 16:10:27,709 [ERROR] Fetching tickers failed for SFRU5: Cannot connect to Bloomberg
+2025-06-10 16:11:23,226 [ERROR] Fetching tickers failed for SFRZ5: Cannot connect to Bloomberg
+2025-06-10 16:12:19,860 [ERROR] Fetching tickers failed for SFRH6: Cannot connect to Bloomberg
