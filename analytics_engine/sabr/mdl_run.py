@@ -15,7 +15,7 @@ from bachelier import bachelier_price
 
 # New modular imports
 from mdl_load import discover_snapshot_files, save_uploaded_files
-from mdl_calibration import fit_sabr, load_global_beta, calibrate_global_beta
+from mdl_calibration import fit_sabr, load_global_beta, calibrate_global_beta, fit_sabr_de
 from mdl_rnd_utils import market_rnd, model_rnd
 from mdl_plot import plot_vol_smile, plot_rnd
 
@@ -146,14 +146,14 @@ def process_snapshot_file(parquet_path, manual_params):
     vols_fit = market_iv[mask][fit_order]
     
     # Automatic calibration
-    params_fast, iv_model_fit, debug_data = fit_sabr(strikes_fit, F, T, vols_fit, method='fast')
-    
+    # params_fast, iv_model_fit, debug_data = fit_sabr(strikes_fit, F, T, vols_fit, method='fast')
+    params_fast, iv_model_fit, debug_data = fit_sabr_de(strikes_fit, F, T, vols_fit)
     # ---  MANUAL CALIBRATION ---
     params_man, iv_manual = (None, None) # Initialize iv_manual as None for plotting
     if recalibrate and st.session_state.get('manual_file') == parquet_path:
         # Correctly unpack the 3-item tuple returned by fit_sabr
         manual_results = fit_sabr(strikes_fit, F, T, vols_fit, method='fast', manual_params=manual_params)
-        
+
         if manual_results and len(manual_results) == 3:
             params_man, iv_manual_fit, debug_data = manual_results
             

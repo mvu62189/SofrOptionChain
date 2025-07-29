@@ -1,13 +1,15 @@
 # calibration.py
 import numpy as np
 import pandas as pd
-from scipy.optimize import minimize
+from scipy.optimize import minimize, differential_evolution
 from scipy.interpolate import CubicSpline, make_interp_spline, UnivariateSpline
 from typing import Tuple, Dict
 from sabr_v2 import calibrate_sabr_full, calibrate_sabr_fast, sabr_vol_normal, sabr_vol_lognormal
 from sabr_v2 import b76_vega
 import json, os
 
+from datetime import datetime
+from iv_utils import implied_vol
 
 #
 # ── Historical β Calibration Utilities ──
@@ -21,8 +23,8 @@ def load_global_beta() -> float:
             data = json.load(open(GLOBAL_PARAMS_PATH))
             return float(data.get("beta", 0))
         except:
-            return 1
-    return 1
+            return 0.5
+    return 0.5
 
 def save_global_beta(beta: float):
     """Persist global beta to disk."""
@@ -35,9 +37,7 @@ def load_and_prepare_for_beta(df: pd.DataFrame):
     as in process_snapshot_file up through producing:
       strikes_fit, vols_fit, F, T
     """
-    import numpy as np
-    from datetime import datetime
-    from iv_utils import implied_vol
+
 
     # 1) Extract strike and mid price, filter liquid quotes
     df = df.copy()
@@ -78,7 +78,7 @@ def load_and_prepare_for_beta(df: pd.DataFrame):
         ) if not np.isnan(r['mid_price']) else np.nan,
         axis=1
     )
-    df_otm = df_otm[(df_otm['iv'] < 100) & (df_otm['volume'] > 0)]
+    df_otm = df_otm[(df_otm['iv'] < 100)] ###  & (df_otm['volume'] > 0)]
     if df_otm.empty:
         return np.array([]), np.array([]), F, T
 
@@ -119,6 +119,7 @@ def calibrate_global_beta(file_list: list[str]) -> float:
 
     def total_sse(beta):
         sse = 0.0
+        rmse = 0.0
         for K, vols, F, T in markets:
             # 1) calibrate (α,ρ,ν) holding this beta fixed
             alpha_b, beta_b, rho_b, nu_b = calibrate_sabr_fast(
@@ -282,7 +283,7 @@ def fit_sabr(strikes: np.ndarray, F: float, T: float,
     # --- a) Define weights to clamp the fit at the ATM region ---
     # We use a Gaussian function to create smoothly decaying weights away from the forward price F.
     # The 'sigma' parameter controls how quickly the weights fall off. A smaller sigma means a tighter clamp.
-    sigma = 0.10 * F  # Example: 5% of the forward price. Tune this as needed.
+    sigma = 0.01 * F  # Example: 5% of the forward price. Tune this as needed.
     weights = np.exp(-0.5 * ((strikes - F) / sigma)**2)
     # Give a huge boost to the point(s) closest to ATM to ensure a near-perfect fit there.
     atm_idx = np.abs(strikes - F).argmin()
@@ -293,7 +294,7 @@ def fit_sabr(strikes: np.ndarray, F: float, T: float,
     # s=0 means interpolation (pass through all points).
     # A larger 's' creates a smoother curve. We start with a small value.
     # This is a heuristic and may require tuning.
-    s = len(vols) * np.var(vols) * 0.01 
+    s = len(vols) * np.var(vols) * 0.05 
     
     # --- c) Create the weighted smoothing B-spline ---
     # UnivariateSpline creates a B-spline representation.
@@ -358,3 +359,56 @@ def fit_sabr(strikes: np.ndarray, F: float, T: float,
     return params, iv_model_on_market_strikes, debug_data
 
 
+def fit_sabr_de(strikes: np.ndarray, F: float, T: float,
+                vols: np.ndarray) -> Tuple[Dict[str, float], np.ndarray, Dict]:
+    """
+    Calibrate SABR using Differential Evolution on an interpolated, Vega-weighted objective function.
+    This is a global optimizer and is more robust but slower.
+    """
+    if len(strikes) < 4:
+        # Not enough points for a reliable fit
+        return {}, np.array([]), {"interp_strikes": [], "interp_vols": []}
+
+    # --- 1. Interpolation and Weighting (same as fit_sabr) ---
+    sigma = 0.01 * F
+    weights = np.exp(-0.5 * ((strikes - F) / sigma)**2)
+    atm_idx = np.abs(strikes - F).argmin()
+    weights[atm_idx] = 100.0
+    s = len(vols) * np.var(vols) * 0.05
+    vol_spline = UnivariateSpline(strikes, vols, w=weights, s=s, k=3)
+
+    fine_strikes = np.arange(strikes.min(), strikes.max(), 0.0625)
+    if fine_strikes[-1] < strikes.max():
+        fine_strikes = np.append(fine_strikes, strikes.max())
+    market_vols_interp = vol_spline(fine_strikes)
+
+    # --- 2. Vega-Weighted Optimization Step ---
+    beta = load_global_beta()
+    vega_weights = b76_vega(F, T, fine_strikes, market_vols_interp) ** 2
+    if np.sum(vega_weights) > 0:
+        vega_weights /= np.sum(vega_weights)
+    else:
+        vega_weights = np.ones_like(fine_strikes)
+
+    # Objective function for differential_evolution
+    def objective(params):
+        alpha, rho, nu = params
+        model_vols = sabr_vol_lognormal(F, fine_strikes, T, alpha, beta, rho, nu)
+        error = np.sum(vega_weights * (model_vols - market_vols_interp)**2)
+        return error
+
+    # Bounds for alpha, rho, nu
+    bounds = [(1e-4, 5.0), (-0.999, 0.999), (1e-4, 5.0)]
+
+    # --- 3. Run Differential Evolution ---
+    result = differential_evolution(objective, bounds, seed=42, popsize=15, maxiter=200, polish=True)
+    alpha, rho, nu = result.x
+
+    # --- 4. Return Final Results ---
+    params = {'alpha': alpha, 'beta': beta, 'rho': rho, 'nu': nu}
+    iv_model_on_market_strikes = sabr_vol_lognormal(F, strikes, T, **params)
+    debug_data = {
+        "interp_strikes": fine_strikes,
+        "interp_vols": market_vols_interp
+    }
+    return params, iv_model_on_market_strikes, debug_data
