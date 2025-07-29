@@ -60,7 +60,7 @@ def load_and_prepare_for_beta(df: pd.DataFrame):
     # 3) OTM selection
     df['type'] = df['type'].str.upper()
     df_otm = df[(
-        (df['type']=='C') & (df['strike'] > F)
+        (df['type']=='C') & (df['strike'] >= F)
     ) | (
         (df['type']=='P') & (df['strike'] < F)
     )].reset_index(drop=True)
