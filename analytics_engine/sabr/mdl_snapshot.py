@@ -16,7 +16,7 @@ MONTH_CODE_MAP = {'F': 1, 'G': 2, 'H': 3, 'J': 4, 'K': 5, 'M': 6,
                 'N': 7, 'Q': 8, 'U': 9, 'V': 10, 'X': 11, 'Z': 12}
 
 
-FIELDS = ['opt_strike_px', 'bid', 'ask', 'last_price', 'volume']
+FIELDS = ['opt_strike_px', 'px_bid', 'px_ask', 'px_mid', 'ivol_mid', 'last_price', 'volume', 'open_int', 'open_int_change']
 
 ROOT_FUTURES = [
 
@@ -30,12 +30,27 @@ ROOT_FUTURES = [
 # ---------------- Logging ----------------
 os.makedirs('logs', exist_ok=True)
 log_path = f'logs/snapshot_log_{datetime.now().strftime("%Y%m%d")}.log'
-logging.basicConfig(
-    filename=log_path,
-    level=logging.INFO,
-    format='%(asctime)s [%(levelname)s] %(message)s',
-)
-logging.getLogger().addHandler(logging.StreamHandler())
+
+# Get the root logger
+logger = logging.getLogger()
+logger.setLevel(logging.INFO) # Ensure logger level is set
+
+# Define a standard formatter
+formatter = logging.Formatter('%(asctime)s [%(levelname)s] %(message)s')
+
+
+
+# 1. Check for and add a FileHandler if none exists
+if not any(isinstance(h, logging.FileHandler) for h in logger.handlers):
+    file_handler = logging.FileHandler(log_path)
+    file_handler.setFormatter(formatter)
+    logger.addHandler(file_handler)
+
+# 2. Check for and add a StreamHandler if none exists
+if not any(isinstance(h, logging.StreamHandler) for h in logger.handlers):
+    stream_handler = logging.StreamHandler()
+    stream_handler.setFormatter(formatter)
+    logger.addHandler(stream_handler)
 
 # ---------------- Helpers ----------------
 def third_wed(year, month):
