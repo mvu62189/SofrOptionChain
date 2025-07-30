@@ -18,9 +18,24 @@ from mdl_load import discover_snapshot_files, save_uploaded_files
 from mdl_calibration import fit_sabr, load_global_beta, calibrate_global_beta, fit_sabr_de
 from mdl_rnd_utils import market_rnd, model_rnd
 from mdl_plot import plot_vol_smile, plot_rnd
+from mdl_snapshot import run_snapshot
 
 st.set_page_config(layout="wide", page_title="SOFR Option Chain Diagnostics")
 st.title("SOFR Option Chain Diagnostics")
+
+# --- 0. Snapshot Runner ---
+st.sidebar.markdown("### Data Snapshots")
+if st.sidebar.button("Run New Snapshot", use_container_width=True):
+    with st.spinner("Running snapshot job... This may take several minutes."):
+        try:
+            run_snapshot()
+            st.sidebar.success("Snapshot job complete!")
+            # Clear caches to force rediscovery of files and rerun processing
+            st.cache_data.clear()
+            st.rerun()
+        except Exception as e:
+            st.sidebar.error("Snapshot job failed.")
+            st.sidebar.exception(e)
 
 # --- 1. File selection via modular loader ---
 file_dict = discover_snapshot_files("snapshots")
