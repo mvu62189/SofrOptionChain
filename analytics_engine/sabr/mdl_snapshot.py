@@ -16,7 +16,7 @@ MONTH_CODE_MAP = {'F': 1, 'G': 2, 'H': 3, 'J': 4, 'K': 5, 'M': 6,
                 'N': 7, 'Q': 8, 'U': 9, 'V': 10, 'X': 11, 'Z': 12}
 
 
-FIELDS = ['opt_strike_px', 'px_bid', 'px_ask', 'px_mid', 'ivol_mid', 'last_price', 'volume', 'open_int', 'open_int_change']
+FIELDS = ['opt_strike_px', 'bid', 'ask', 'mid', 'ivol_mid_rt', 'last_price', 'volume', 'rt_open_interest', 'rt_open_int_dt', 'open_int_change']
 
 ROOT_FUTURES = [
 
@@ -103,12 +103,22 @@ def trim_volume_edges(df):
     """Trim to strikes between first and last with non-NaN volume, per type."""
 
     def _trim(group):
-        if 'volume' not in group.columns or group['volume'].isna().all():
+        # The 'type' for the current group ('c' or 'p') is stored in its name
+        group_type = group.name
+
+        if 'rt_open_interest' not in group.columns or group['rt_open_interest'].isna().all():
             return pd.DataFrame(columns=group.columns)
-        valid = group['volume'].notna()
+        valid = group['rt_open_interest'].notna()
         first = valid.idxmax()
         last = valid[::-1].idxmax()
-        return group.loc[first:last].copy()
+
+        # Get the trimmed DataFrame slice
+        trimmed_df = group.loc[first:last].copy()
+
+        # Re-add the 'type' column before returning
+        trimmed_df['type'] = group_type
+
+        return trimmed_df
 
     return df.groupby('type', group_keys=False).apply(_trim, include_groups=False).reset_index(drop=True)
 
@@ -188,7 +198,7 @@ def run_snapshot(output_dir=None, futures_list=None):
 
             file_name = f"{code}_{expiry.strftime('%b').lower() if pd.notna(expiry) else 'na'}.parquet"
             df.to_parquet(f"{out_dir}/{file_name}", index=False)
-            logging.info(f"[SAVE] {code} → {file_name}")
+            logging.info(f"[SAVE] {code} -> {file_name}")
 
     logging.info(f"[SUMMARY] Total futures scanned: {len(futures_list)}")
     logging.info(f"[SUMMARY] Output written to: {out_dir}")
