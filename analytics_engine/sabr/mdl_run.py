@@ -36,17 +36,19 @@ st.title("SOFR Option Chain Diagnostics")
 # --- 0. Snapshot Runner ---
 st.sidebar.markdown("### Data Snapshots")
 if st.sidebar.button("Run New Snapshot", use_container_width=True):
-    with st.spinner("Running snapshot job... This may take several minutes."):
-        try:
-            run_snapshot()
-            st.sidebar.success("Snapshot job complete!")
-            # Clear caches to force rediscovery of files and rerun processing
-            st.cache_data.clear()
-            st.rerun()
-        except Exception as e:
-            st.sidebar.error("Snapshot job failed.")
-            st.sidebar.exception(e)
-
+    if BLOOMBERG_AVAILABLE:
+        with st.spinner("Running snapshot job... This may take several minutes."):
+            try:
+                run_snapshot()
+                st.sidebar.success("Snapshot job complete!")
+                # Clear caches to force rediscovery of files and rerun processing
+                st.cache_data.clear()
+                st.rerun()
+            except Exception as e:
+                st.sidebar.error("Snapshot job failed.")
+                st.sidebar.exception(e)
+    else:
+        st.sidebar.error("Bloomberg is not available")
 # --- 1. File selection via modular loader ---
 file_dict = discover_snapshot_files("snapshots")
 selected_folders = st.sidebar.multiselect(
@@ -251,7 +253,7 @@ if st.session_state.get("refresh_rnd", True):
     fig2 = plot_rnd(results, rnd_visible, show_mkt_rnd, show_model_rnd, show_manual_rnd)
     st.pyplot(fig2, clear_figure=True)
 
-# --- 7. Debug & parameter tables ---
+## --- 7. Debug & parameter tables ---
 with col_clear:
     if st.button("Clear Cache"):
         process_snapshot_file.clear()
