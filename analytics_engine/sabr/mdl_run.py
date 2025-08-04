@@ -141,12 +141,19 @@ with col2:
 def process_snapshot_file(parquet_path, manual_params):
     df_raw = pd.read_parquet(parquet_path)
     df = df_raw.copy()
+
+    # Extract strike from ticker
     df['strike'] = df['ticker'].str.extract(r'\b(\d+\.\d+)\b')[0].astype(float)
+    
+    # Filter for strikes with active bid/ask
     liquid = df[(df['bid']>0)&(df['ask']>0)]
     if liquid.empty: return None
     lo, hi = liquid['strike'].min(), liquid['strike'].max()
     df_trim = df[(df['strike']>=lo)&(df['strike']<=hi)].reset_index(drop=True)
+
+    # Get mid price
     df_trim['mid_price'] = np.where((df_trim['bid']>0)&(df_trim['ask']>0), 0.5*(df_trim['bid']+df_trim['ask']), np.nan)
+    
     df_trim['type'] = df_trim['type'].str.upper()
     F = float(df_trim['future_px'].iloc[0])
     df_otm = df_trim[((df_trim['type']=='C')&(df_trim['strike']>F))|((df_trim['type']=='P')&(df_trim['strike']<F))].reset_index(drop=True)
@@ -156,9 +163,10 @@ def process_snapshot_file(parquet_path, manual_params):
     expiry = pd.to_datetime(df_otm['expiry_date'].iloc[0]).date()
     T = (expiry - snap_dt.date()).days/365.0
     
+    # Get Black-76 vol
     df_otm['iv'] = df_otm.apply(lambda r: implied_vol(F=float(r['future_px']), T=T, K=r['strike'], price=r['mid_price'], opt_type=r['type'], engine='black76') if not np.isnan(r['mid_price']) else np.nan, axis=1)
     
-    df_otm = df_otm[df_otm['iv']<100]
+    df_otm = df_otm[df_otm['iv']<200]
     liquid2 = df_otm[df_otm['volume']>0]
     if liquid2.empty: return None
     lo2, hi2 = liquid2['strike'].min(), liquid2['strike'].max()
