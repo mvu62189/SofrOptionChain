@@ -5,9 +5,17 @@ import logging
 import calendar
 from datetime import datetime
 import pandas as pd
-from xbbg import blp
-from pandas.tseries.holiday import USFederalHolidayCalendar
 
+from pandas.tseries.holiday import USFederalHolidayCalendar
+try:
+    # Attempt to import the real libraries
+    from xbbg import blp
+    import blpapi
+    BLOOMBERG_AVAILABLE = True
+except ImportError:
+    # If the import fails, set a flag
+    BLOOMBERG_AVAILABLE = False
+    print("Bloomberg libraries not found. Running in local mode with historical data.")
 
 # ---------------- Config ----------------
 

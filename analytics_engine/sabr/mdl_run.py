@@ -19,6 +19,16 @@ from mdl_calibration import fit_sabr, load_global_beta, calibrate_global_beta, f
 from mdl_rnd_utils import market_rnd, model_rnd
 from mdl_plot import plot_vol_smile, plot_rnd
 from mdl_snapshot import run_snapshot
+try:
+    # Attempt to import the real libraries
+    from mdl_snapshot import run_snapshot
+    import xbbg
+    import blpapi
+    BLOOMBERG_AVAILABLE = True
+except ImportError:
+    # If the import fails, set a flag
+    BLOOMBERG_AVAILABLE = False
+    print("Bloomberg libraries not found. Running in local mode with historical data.")
 
 st.set_page_config(layout="wide", page_title="SOFR Option Chain Diagnostics")
 st.title("SOFR Option Chain Diagnostics")
