@@ -370,12 +370,17 @@ def fit_sabr_de(strikes: np.ndarray, F: float, T: float,
         return {}, np.array([]), {"interp_strikes": [], "interp_vols": []}
 
     # --- 1. Interpolation and Weighting (same as fit_sabr) ---
-    sigma = 0.01 * F
-    weights = np.exp(-0.5 * ((strikes - F) / sigma)**2)
-    atm_idx = np.abs(strikes - F).argmin()
-    weights[atm_idx] = 100.0
-    s = len(vols) * np.var(vols) * 0.05
-    vol_spline = UnivariateSpline(strikes, vols, w=weights, s=s, k=3)
+    #sigma = 0.01 * F
+    #weights = np.exp(-0.5 * ((strikes - F) / sigma)**2)
+    #atm_idx = np.abs(strikes - F).argmin()
+    #weights[atm_idx] = 100.0
+    #s = len(vols) * np.var(vols) * 0.05
+    #vol_spline = UnivariateSpline(strikes, vols, w=weights, s=s, k=3)
+
+    # --- 1. Strict Cubic Spline Interpolation ---
+    # Using CubicSpline is a more direct way to get a strict interpolation.
+    # 'natural' boundary conditions are a common choice.
+    vol_spline = CubicSpline(strikes, vols, bc_type='natural')
 
     fine_strikes = np.arange(strikes.min(), strikes.max(), 0.0625)
     if fine_strikes[-1] < strikes.max():

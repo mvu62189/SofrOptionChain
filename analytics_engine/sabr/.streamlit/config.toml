@@ -1,0 +1,7 @@
+[theme]
+base="dark"
+primaryColor="#4a90e2" # A pleasant blue, change as you like
+backgroundColor="#0e1117"
+secondaryBackgroundColor="#262730"
+textColor="#fafafa"
+font="sans serif"

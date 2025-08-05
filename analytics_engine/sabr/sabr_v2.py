@@ -61,6 +61,7 @@ def sabr_vol_lognormal(F, K, T, alpha, beta, rho, nu):
     # ATM case
     atm = np.isclose(F, K, rtol=1e-8, atol=1e-8)
 
+    '''
     iv = np.zeros_like(F)
 
     if np.any(atm):
@@ -72,7 +73,7 @@ def sabr_vol_lognormal(F, K, T, alpha, beta, rho, nu):
                 + (2 - 3 * rho**2) * nu**2 / 24
             ) * T
         )
-
+    '''
 
     # For non-ATM strikes, these are arrays. For ATM, some values will be NaN/inf due to log(1)=0.
     logFK = np.log(F / K)

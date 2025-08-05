@@ -33,6 +33,21 @@ def plot_vol_smile(results: dict, vol_visible: dict, show_mkt_iv, show_model_iv,
     """ 
     fig, ax = plt.subplots(figsize=(10, 7)) # Make figure a bit bigger
 
+        # --- MANUAL STYLING  ---
+    fig.patch.set_facecolor('#262730')  # Sets the outer background
+    ax.set_facecolor('#262730')       # Sets the inner plot background
+
+    # Adjust text and axis colors for readability
+    ax.title.set_color('white')
+    ax.xaxis.label.set_color('white')
+    ax.yaxis.label.set_color('white')
+    ax.tick_params(colors='white', which='both')
+    ax.spines['left'].set_color('gray')
+    ax.spines['bottom'].set_color('gray')
+    ax.spines['top'].set_color('gray')
+    ax.spines['right'].set_color('gray')
+    # --- END MANUAL STYLING ---
+
     # Get the default color cycle from matplotlib
     prop_cycle = plt.rcParams['axes.prop_cycle']
     colors = prop_cycle.by_key()['color']
@@ -44,7 +59,14 @@ def plot_vol_smile(results: dict, vol_visible: dict, show_mkt_iv, show_model_iv,
             
         # Assign a consistent color for the current file
         color = colors[i % len(colors)]
-        label_base = os.path.basename(fname)
+
+        
+        parts = os.path.normpath(fname).split(os.sep)
+        if len(parts) >= 3:
+            # Create label from parent directories and filename
+            label_base = f"{parts[-3]}_{parts[-2]}_{os.path.basename(fname)}"
+        else:
+            label_base = os.path.basename(fname)
 
         # Extract data from the results dictionary
         strikes = res.get('strikes')
@@ -98,7 +120,7 @@ def plot_vol_smile(results: dict, vol_visible: dict, show_mkt_iv, show_model_iv,
     
     return fig
 
-def plot_rnd(results: dict, rnd_visible: dict, show_mkt_rnd: bool, show_model_rnd: bool, show_manual_rnd: bool) -> plt.Figure:
+def plot_rnd_old(results: dict, rnd_visible: dict, show_mkt_rnd: bool, show_model_rnd: bool, show_manual_rnd: bool) -> plt.Figure:
     """
     Create a Risk-Neutral Density plot from `results`.
     `rnd_visible[fname]` toggles visibility for each file.
@@ -120,4 +142,62 @@ def plot_rnd(results: dict, rnd_visible: dict, show_mkt_rnd: bool, show_model_rn
     ax.set_ylabel("RND (normalized)")
     ax.set_title("Risk-Neutral Density (RND)")
     ax.legend()
+    return fig
+
+def plot_rnd(results: dict, rnd_visible: dict, show_mkt_rnd: bool, show_model_rnd: bool, show_manual_rnd: bool) -> plt.Figure:
+    """
+    Create a Risk-Neutral Density plot from `results`.
+    `rnd_visible[fname]` toggles visibility for each file.
+    A consistent color is used for each file, with markers/styles differentiating series.
+    """
+    fig, ax = plt.subplots(figsize=(10, 7))
+
+    # --- MANUAL STYLING  ---
+    fig.patch.set_facecolor('#262730')  # Sets the outer background
+    ax.set_facecolor('#262730')       # Sets the inner plot background
+
+    # Adjust text and axis colors for readability
+    ax.title.set_color('white')
+    ax.xaxis.label.set_color('white')
+    ax.yaxis.label.set_color('white')
+    ax.tick_params(colors='white', which='both')
+    ax.spines['left'].set_color('gray')
+    ax.spines['bottom'].set_color('gray')
+    ax.spines['top'].set_color('gray')
+    ax.spines['right'].set_color('gray')
+    # --- END MANUAL STYLING ---
+
+    prop_cycle = plt.rcParams['axes.prop_cycle']
+    colors = prop_cycle.by_key()['color']
+
+    for i, (fname, res) in enumerate(results.items()):
+        if not res or not rnd_visible.get(fname):
+            continue
+        
+        # Assign a consistent color for the current file
+        color = colors[i % len(colors)]
+        
+        # Use a more descriptive label that includes the timestamp
+        parts = os.path.normpath(fname).split(os.sep)
+        # Assumes path structure like .../snapshots/YYYYMMDD/HHMMSS/file.parquet
+        if len(parts) >= 3:
+            label = f"{parts[-3]}_{parts[-2]}_{os.path.basename(fname)}"
+        else:
+            label = os.path.basename(fname)
+
+        if show_mkt_rnd and 'rnd_market' in res and res['rnd_market'] is not None:
+            ax.plot(res['strikes'], res['rnd_market'], marker='o', linestyle='-', label=f"Market RND ({label})", color=color)
+        
+        if show_model_rnd and 'rnd_sabr' in res and res['rnd_sabr'] is not None:
+            ax.plot(res['strikes'], res['rnd_sabr'],   marker='x', linestyle='--', label=f"SABR RND ({label})", color=color)
+        
+        if show_manual_rnd and 'rnd_manual' in res and res.get('rnd_manual') is not None:
+            ax.plot(res['strikes'], res['rnd_manual'], marker='s', linestyle=':', label=f"Manual RND ({label})", color=color, alpha=0.8)
+
+    ax.set_xlabel("Strike")
+    ax.set_ylabel("RND (normalized)")
+    ax.set_title("Risk-Neutral Density (RND)")
+    ax.grid(True, linestyle='--', alpha=0.6)
+    ax.legend(fontsize='small')
+    fig.tight_layout()
     return fig
