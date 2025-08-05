@@ -20,7 +20,7 @@ from mdl_rnd_utils import market_rnd, model_rnd
 from mdl_plot import plot_vol_smile, plot_rnd
 from mdl_snapshot import run_snapshot
 try:
-    # Attempt to import the real libraries
+    # Attempt to import the libraries
     from mdl_snapshot import run_snapshot
     import xbbg
     import blpapi
@@ -30,111 +30,6 @@ except ImportError:
     BLOOMBERG_AVAILABLE = False
     print("Bloomberg libraries not found. Running in local mode with historical data.")
 
-st.set_page_config(layout="wide", page_title="SOFR Option Chain Diagnostics")
-st.title("SOFR Option Chain Diagnostics")
-
-# --- 0. Snapshot Runner ---
-st.sidebar.markdown("### Data Snapshots")
-if st.sidebar.button("Run New Snapshot", use_container_width=True):
-    if BLOOMBERG_AVAILABLE:
-        with st.spinner("Running snapshot job... This may take several minutes."):
-            try:
-                run_snapshot()
-                st.sidebar.success("Snapshot job complete!")
-                # Clear caches to force rediscovery of files and rerun processing
-                st.cache_data.clear()
-                st.rerun()
-            except Exception as e:
-                st.sidebar.error("Snapshot job failed.")
-                st.sidebar.exception(e)
-    else:
-        st.sidebar.error("Bloomberg is not available")
-# --- 1. File selection via modular loader ---
-file_dict = discover_snapshot_files("snapshots")
-selected_folders = st.sidebar.multiselect(
-    "Folders to load:", options=list(file_dict.keys()), default=[]
-)
-
-# Clear Cache button
-col_main, col_clear = st.columns([1, 9])
-
-
-all_files = []
-for folder in selected_folders:
-    st.sidebar.markdown(f"**{folder}/**")
-    files = file_dict.get(folder, [])
-    chosen = st.sidebar.multiselect(
-        f"Files in {folder}/", options=files, default=[], key=folder
-    )
-    all_files.extend(chosen)
-
-uploaded = save_uploaded_files(
-    st.sidebar.file_uploader(
-        "Or add Parquet files", type="parquet", accept_multiple_files=True
-    )
-)
-
-files_to_show = all_files + uploaded
-if not files_to_show:
-    st.warning("No files selected or uploaded.")
-    st.stop()
-
-
-### --- 2. Manual SABR Calibration (one file at a time) ---
-with st.sidebar.form(key='manual_sabr_form', clear_on_submit=False):
-    st.markdown("### Manual SABR Calibration")
-    # 2.a: choose exactly one file
-    manual_file = st.selectbox(
-        "File to recalibrate",
-        options=files_to_show,
-        format_func=lambda f: os.path.basename(f)
-    )
-    st.markdown("#### Parameter inputs")
-    alpha_in = st.number_input(
-        "alpha", min_value=1e-4, max_value=5.0,
-        value=0.1, step=1e-4, format="%.5f"
-    )
-    beta_in = st.number_input(
-        "beta", min_value=0.0, max_value=1.0,
-        value=0.5, step=1e-4, format="%.5f"
-    )
-    rho_in = st.number_input(
-        "rho", min_value=-0.99999, max_value=0.99999,
-        value=0.0, step=1e-5, format="%.5f"
-    )
-    nu_in = st.number_input(
-        "nu", min_value=1e-4, max_value=5.0,
-        value=0.1, step=1e-4, format="%.5f"
-    )
-    recalibrate = st.form_submit_button("Recalibrate")
-manual_params = dict(alpha=alpha_in, beta=beta_in, rho=rho_in, nu=nu_in)
-st.session_state['manual_file'] = manual_file
-
-# --- 3. Visibility toggles for Vol & RND ---
-def get_visibility_state(label, files, default=True):
-    key = f"{label}_visible"
-    if key not in st.session_state:
-        st.session_state[key] = {file_path: default for file_path in files}
-    for file_path in files:
-        basename = os.path.basename(file_path)
-        st.session_state[key][file_path] = st.sidebar.checkbox(
-            f"Show {label} ({basename})",
-            value=st.session_state[key].get(file_path, default),
-            key=f"{label}_{file_path}"
-        )
-    return st.session_state[key]
-
-vol_visible = get_visibility_state("Vol Smile", files_to_show)
-rnd_visible = get_visibility_state("RND", files_to_show)
-
-# --- 4. Refresh buttons ---
-col1, col2 = st.columns(2)
-with col1:
-    if st.button("Refresh Vol Smile Chart"):
-        st.session_state["refresh_vol"] = not st.session_state.get("refresh_vol", True)
-with col2:
-    if st.button("Refresh RND Chart"):
-        st.session_state["refresh_rnd"] = not st.session_state.get("refresh_rnd", True)
 
 # --- 5. Process each file  ---
 @st.cache_data(show_spinner="Calibrating...", persist=True)
@@ -218,55 +113,324 @@ def process_snapshot_file(parquet_path, manual_params):
             'forward_price': F,
             'debug_data': debug_data
             }
+
+
+# plt.style.use('dark_background')
+st.set_page_config(layout="wide", page_title="SOFR Option Chain")
+st.title("SOFR Option Chain")
+
+# This container will hold the forward prices display
+forward_price_container = st.container()
+
+# --- 0. Snapshot Runner ---
+st.sidebar.markdown("### Data Snapshots")
+if st.sidebar.button("Run New Snapshot", use_container_width=True):
+    if BLOOMBERG_AVAILABLE:
+        with st.spinner("Running snapshot job... This may take several minutes."):
+            try:
+                run_snapshot()
+                st.sidebar.success("Snapshot job complete!")
+                # Clear caches to force rediscovery of files and rerun processing
+                st.cache_data.clear()
+                st.rerun()
+            except Exception as e:
+                st.sidebar.error("Snapshot job failed.")
+                st.sidebar.exception(e)
+    else:
+        st.sidebar.error("Bloomberg is not available")
+# --- 1. File selection via modular loader ---
+file_dict = discover_snapshot_files("snapshots")
+selected_folders = st.sidebar.multiselect(
+    "Folders to load:", options=list(file_dict.keys()), default=[]
+)
+
+# In mdl_run.py, around line 59
+
+if st.sidebar.button("Clear Cache", use_container_width=True):
+    process_snapshot_file.clear()
+    st.toast("Calibration cache cleared.")
+    st.rerun()
+
+s_col1, s_col2 = st.sidebar.columns(2)
+with s_col1:
+    if st.sidebar.button("Refresh Vol Smile"):
+        st.session_state["refresh_vol"] = not st.session_state.get("refresh_vol", True)
+with s_col2:
+    if st.sidebar.button("Refresh RND"):
+        st.session_state["refresh_rnd"] = not st.session_state.get("refresh_rnd", True)
+
+# --- 1. File selection via modular loader ---
+file_dict = discover_snapshot_files("snapshots")
+
+# Clear Cache button ############# NEW BUTTON MADE
+# col_main, col_clear = st.columns([1, 9])
+
+
+all_files = []
+for folder in selected_folders:
+    st.sidebar.markdown(f"**{folder}/**")
+    files = file_dict.get(folder, [])
+    
+    
+    #chosen = st.sidebar.multiselect(
+    #    f"Files in {folder}/", options=files, default=[], key=folder
+    #)
+    chosen = st.sidebar.multiselect(
+        label=f"Files in {folder}/",
+        options=files,
+        default=[],
+        key=folder,
+        format_func=os.path.basename # This line formats the display
+    )
+    all_files.extend(chosen)
+
+uploaded = save_uploaded_files(
+    st.sidebar.file_uploader(
+        "Or add Parquet files", type="parquet", accept_multiple_files=True
+    )
+)
+
+files_to_show = all_files + uploaded
+if not files_to_show:
+    st.warning("No files selected or uploaded.")
+    st.stop()
+
+
+### --- 2. Manual SABR Calibration (one file at a time) ---
+with st.sidebar.form(key='manual_sabr_form', clear_on_submit=False):
+    st.markdown("### Manual SABR Calibration")
+    # 2.a: choose exactly one file
+    manual_file = st.selectbox(
+        "File to recalibrate",
+        options=files_to_show,
+        format_func=lambda f: os.path.basename(f)
+    )
+    st.markdown("#### Parameter inputs")
+    alpha_in = st.number_input(
+        "alpha", min_value=1e-4, max_value=5.0,
+        value=0.1, step=1e-4, format="%.5f"
+    )
+    beta_in = st.number_input(
+        "beta", min_value=0.0, max_value=1.0,
+        value=0.5, step=1e-4, format="%.5f"
+    )
+    rho_in = st.number_input(
+        "rho", min_value=-0.99999, max_value=0.99999,
+        value=0.0, step=1e-5, format="%.5f"
+    )
+    nu_in = st.number_input(
+        "nu", min_value=1e-4, max_value=5.0,
+        value=0.1, step=1e-4, format="%.5f"
+    )
+    recalibrate = st.form_submit_button("Recalibrate")
+manual_params = dict(alpha=alpha_in, beta=beta_in, rho=rho_in, nu=nu_in)
+st.session_state['manual_file'] = manual_file
+
+
+## HISTORICAL BETA BUTTON
+
+st.sidebar.markdown("---")
+st.sidebar.markdown("### Historical Beta")
+
+beta_col1, beta_col2 = st.sidebar.columns(2)
+with beta_col1:
+    if st.sidebar.button("Calibrate Global β"):
+        with st.spinner("Optimizing β across selected snapshots…"):
+            β_opt = calibrate_global_beta(files_to_show)
+            st.success(f"Global β optimized: {β_opt:.4f}")
+            process_snapshot_file.clear()
+            st.warning("Cache cleared. Refresh (F5) to apply new β.")
+            st.stop() # Use stop to force a manual F5 refresh
+
+with beta_col2:
+    st.metric("Current β", f"{load_global_beta():.4f}")
+
+st.sidebar.markdown("---")
+
+# ... followed by the Volatility Smile Options section ...
+
+
+# --- 3. Visibility toggles for Vol & RND ---
+#def get_visibility_state(label, files, default=True):
+#    key = f"{label}_visible"
+#    if key not in st.session_state:
+#        st.session_state[key] = {file_path: default for file_path in files}
+#    for file_path in files:
+#        basename = os.path.basename(file_path)
+#        st.session_state[key][file_path] = st.sidebar.checkbox(
+#            f"Show {label} ({basename})",
+#            value=st.session_state[key].get(file_path, default),
+#            key=f"{label}_{file_path}"
+#        )
+#    return st.session_state[key]
+
+#vol_visible = get_visibility_state("Vol Smile", files_to_show)
+#rnd_visible = get_visibility_state("RND", files_to_show)
+
+
+####################################################
+# --- 3. New Sidebar UI for Visibility Toggles ---
+####################################################
+# --- Volatility Smile Section ---
+st.sidebar.markdown("### Volatility Smile Options")
+
+# Initialize session state for vol visibility if it doesn't exist
+if 'vol_visible' not in st.session_state:
+    st.session_state['vol_visible'] = {f: True for f in files_to_show}
+
+# Create file-specific toggles and build the visibility dictionary
+vol_visible = {}
+for f in files_to_show:
+    # Create the desired label: yyyymmdd/hhmmss/filename.parquet
+    parts = os.path.normpath(f).split(os.sep)
+    label = os.path.join(*parts[-3:]) if len(parts) >= 3 else os.path.basename(f)
+    
+    # Create the checkbox and update the dictionary for the plot function
+    is_visible = st.sidebar.checkbox(
+        label,
+        value=st.session_state['vol_visible'].get(f, True),
+        key=f"vol_{f}" # Unique key for this checkbox
+    )
+    vol_visible[f] = is_visible
+    st.session_state['vol_visible'][f] = is_visible # Save state for reruns
+
+st.sidebar.markdown("---") # Visual separator
+
+# Series toggles for Vol Smile
+show_mkt_iv    = st.sidebar.checkbox("Show Market IV", value=True, key="sidebar_toggle_mkt_iv")
+show_model_iv  = st.sidebar.checkbox("Show SABR Model IV", value=True, key="sidebar_toggle_model_iv")
+show_manual_iv = st.sidebar.checkbox("Show Manual IV", value=True, key="sidebar_toggle_manual_iv")
+
+st.sidebar.markdown("---") # Visual separator
+
+
+# --- Risk-Neutral Density Section ---
+st.sidebar.markdown("### Risk-Neutral Density Options")
+
+# Initialize session state for RND visibility if it doesn't exist
+if 'rnd_visible' not in st.session_state:
+    st.session_state['rnd_visible'] = {f: True for f in files_to_show}
+
+# Create file-specific toggles and build the visibility dictionary
+rnd_visible = {}
+for f in files_to_show:
+    # Create the desired label (re-used logic)
+    parts = os.path.normpath(f).split(os.sep)
+    label = os.path.join(*parts[-3:]) if len(parts) >= 3 else os.path.basename(f)
+
+    # Create the checkbox and update the dictionary
+    is_visible = st.sidebar.checkbox(
+        label,
+        value=st.session_state['rnd_visible'].get(f, True),
+        key=f"rnd_{f}" # Unique key for this checkbox
+    )
+    rnd_visible[f] = is_visible
+    st.session_state['rnd_visible'][f] = is_visible # Save state for reruns
+
+st.sidebar.markdown("---") # Visual separator
+
+# Series toggles for RND
+show_mkt_rnd    = st.sidebar.checkbox("Show Market RND", value=True, key="sidebar_toggle_mkt_rnd")
+show_model_rnd  = st.sidebar.checkbox("Show SABR RND", value=True, key="sidebar_toggle_model_rnd")
+show_manual_rnd = st.sidebar.checkbox("Show Manual RND", value=False, key="sidebar_toggle_manual_rnd")
+##############################################################
+# End of sidebar UI code block
+###############################################################
+
+# --- 4. Refresh buttons --- ############## NEW BUTTON MADE
+#col1, col2 = st.columns(2)
+#with col1:
+#    if st.button("Refresh Vol Smile Chart"):
+#        st.session_state["refresh_vol"] = not st.session_state.get("refresh_vol", True)
+#with col2:
+#    if st.button("Refresh RND Chart"):
+#        st.session_state["refresh_rnd"] = not st.session_state.get("refresh_rnd", True)
+
+
     
 results = {f: process_snapshot_file(f, manual_params) for f in files_to_show}
 
+# --- Display Currently Loaded Chains and Forward Prices ---
+with forward_price_container:
+    st.markdown("### Currently Loaded Chains")
+    
+    # Filter for results that have a forward price to display
+    loaded_files = [
+        (fname, res) for fname, res in results.items() 
+        if res and res.get('forward_price')
+    ]
+    
+    if loaded_files:
+        # Create a header for the list
+        col1, col2 = st.columns([3, 1])
+        col1.markdown("**Chain Path**")
+        col2.markdown("**Forward Price**")
+
+        # Loop through the loaded files and display each on its own line
+        for fname, res in loaded_files:
+            # Create the descriptive label: yyyymmdd/hhmmss/filename.parquet
+            parts = os.path.normpath(fname).split(os.sep)
+            label = os.path.join(*parts[-3:]) if len(parts) >= 3 else os.path.basename(fname)
+            
+            fwd_price = res['forward_price']
+            
+            # Use two columns for clean alignment on each line
+            col1, col2 = st.columns([3, 1])
+            with col1:
+                st.markdown(f"`{label}`") # Use code formatting for the path
+            with col2:
+                st.markdown(f"**`{fwd_price:.4f}`**") # Use bold code formatting for the price
+    else:
+        st.info("No files loaded to display forward prices.")
+    
+    st.markdown("---")
+
 # --- Display Forward Prices ---
-st.sidebar.markdown("---")
-st.sidebar.markdown("### Forward Prices")
-for fname, res in results.items():
-    if res and res.get('forward_price'):
-        label = os.path.basename(fname)
-        fwd_price = res['forward_price']
-        st.sidebar.markdown(f"**{label}:** `{fwd_price:.4f}`")
+#st.sidebar.markdown("---")
+#st.sidebar.markdown("### Forward Prices")
+#for fname, res in results.items():
+#    if res and res.get('forward_price'):
+#        label = os.path.basename(fname)
+#        fwd_price = res['forward_price']
+#        st.sidebar.markdown(f"**{label}:** `{fwd_price:.4f}`")
 
-
-col1, col2 = st.columns([1,3])
-with col1:
-    if st.button("Historical β-Calibrate"):
-        st.info("Optimizing β across selected snapshots…")
-        β_opt = calibrate_global_beta(files_to_show)
-        st.success(f"Global β optimized: {β_opt:.4f}")
-        process_snapshot_file.clear()
-        st.warning("Calibration cache cleared. Please refresh your browser (F5) to apply the new β.")
-        st.stop()
-with col2:
-    st.metric("Current β", f"{load_global_beta():.4f}")
+# BETA CALIBRATE BUTTON _ NEW BUTTON MADE
+#col1, col2 = st.columns([1,3])
+#with col1:
+#    if st.button("Historical β-Calibrate"):
+#        st.info("Optimizing β across selected snapshots…")
+#        β_opt = calibrate_global_beta(files_to_show)
+#        st.success(f"Global β optimized: {β_opt:.4f}")
+#        process_snapshot_file.clear()
+#        st.warning("Calibration cache cleared. Please refresh your browser (F5) to apply the new β.")
+#        st.stop()
+#with col2:
+#    st.metric("Current β", f"{load_global_beta():.4f}")
 
 # --- 6. Plot via plotting module ---
 if st.session_state.get("refresh_vol", True):
-    show_mkt_iv    = st.checkbox("Show Market IV",    value=True, key="toggle_mkt_iv")
-    show_model_iv  = st.checkbox("Show SABR Model IV", value=True, key="toggle_model_iv")
-    show_manual_iv = st.checkbox("Show Manual IV",     value=True, key="toggle_manual_iv")
+    #show_mkt_iv    = st.checkbox("Show Market IV",    value=True, key="toggle_mkt_iv")
+    #show_model_iv  = st.checkbox("Show SABR Model IV", value=True, key="toggle_model_iv")
+    #show_manual_iv = st.checkbox("Show Manual IV",     value=True, key="toggle_manual_iv")
 
     fig = plot_vol_smile(results, vol_visible, show_mkt_iv, show_model_iv, show_manual_iv)
     st.pyplot(fig, clear_figure=True)
 
 
 if st.session_state.get("refresh_rnd", True):
-    show_mkt_rnd    = st.checkbox("Show Market RND",    value=True,   key="toggle_mkt_rnd")
-    show_model_rnd  = st.checkbox("Show SABR RND",      value=True,   key="toggle_model_rnd")
-    show_manual_rnd = st.checkbox("Show Manual RND",    value=False,  key="toggle_manual_rnd")
+    #show_mkt_rnd    = st.checkbox("Show Market RND",    value=True,   key="toggle_mkt_rnd")
+    #show_model_rnd  = st.checkbox("Show SABR RND",      value=True,   key="toggle_model_rnd")
+    #show_manual_rnd = st.checkbox("Show Manual RND",    value=False,  key="toggle_manual_rnd")
 
     fig2 = plot_rnd(results, rnd_visible, show_mkt_rnd, show_model_rnd, show_manual_rnd)
     st.pyplot(fig2, clear_figure=True)
 
 ## --- 7. Debug & parameter tables ---
-with col_clear:
-    if st.button("Clear Cache"):
-        process_snapshot_file.clear()
-        st.warning("Calibration cache cleared. Refresh (F5) to rerun calibration.")
-        st.stop()
+#with col_clear:
+#    if st.button("Clear Cache"):
+#       process_snapshot_file.clear()
+#        st.warning("Calibration cache cleared. Refresh (F5) to rerun calibration.")
+#        st.stop()
 
 with st.expander("Debug 2.0: Snapshot Data & Params"):
     for f, res in results.items():
