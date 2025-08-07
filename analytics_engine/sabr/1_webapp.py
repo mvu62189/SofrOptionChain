@@ -140,9 +140,22 @@ if st.sidebar.button("Run New Snapshot", use_container_width=True):
         st.sidebar.error("Bloomberg is not available")
 # --- 1. File selection via modular loader ---
 file_dict = discover_snapshot_files("snapshots")
+
+# Set a default value from session state if it exists
+default_folder = []
+if 'shared_folder' in st.session_state and st.session_state.shared_folder in file_dict:
+    default_folder = [st.session_state.shared_folder]
+
 selected_folders = st.sidebar.multiselect(
-    "Folders to load:", options=list(file_dict.keys()), default=[]
+    "Folders to load:", options=list(file_dict.keys()), default=[default_folder]
 )
+
+# After selection, update the shared state for other pages to use
+if selected_folders:
+    st.session_state.shared_folder = selected_folders[0]
+else:
+    if 'shared_folder' in st.session_state:
+        del st.session_state.shared_folder
 
 # In mdl_run.py, around line 59
 

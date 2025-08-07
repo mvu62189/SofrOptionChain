@@ -11,7 +11,7 @@ def discover_snapshot_files(root_folder: str = "snapshots") -> Dict[str, List[st
     Scan `root_folder` recursively for .parquet files.
     Returns a dict mapping each subfolder (relative to root) to list of file paths.
     """
-    local_files = sorted(glob.glob(f"{root_folder}/**/*.parquet", recursive=True))
+    local_files = sorted(glob.glob(f"{root_folder}/**/*.parquet", recursive=True), reverse=True)
     file_dict: Dict[str, List[str]] = {}
     for f in local_files:
         folder = os.path.relpath(os.path.dirname(f), root_folder)
