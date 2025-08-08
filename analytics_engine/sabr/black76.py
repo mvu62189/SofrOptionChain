@@ -2,7 +2,7 @@ import numpy as np
 from scipy.stats import norm
 from scipy.optimize import brentq
 
-def b76_price(F: float, K: float, T: float, sigma: float, opt_type: str = 'C') -> float:
+def b76_price_non_vected(F: float, K: float, T: float, sigma: float, opt_type: str = 'C') -> float:
     """
     Black-76 forward‐price of a European option:
       C = F·N(d1) – K·N(d2)   (call)
@@ -19,6 +19,44 @@ def b76_price(F: float, K: float, T: float, sigma: float, opt_type: str = 'C') -
         return F * norm.cdf(d1) - K * norm.cdf(d2)
     else:
         return K * norm.cdf(-d2) - F * norm.cdf(-d1)
+
+def b76_price(F: float, K, T: float, sigma, opt_type: str = 'C') -> np.ndarray:
+    """
+    Vectorized Black-76 forward-price of a European option.
+    Handles both scalar and array inputs for K and sigma.
+    """
+    # Ensure inputs that can be arrays are treated as such for robust calculations
+    K = np.asanyarray(K)
+    sigma = np.asanyarray(sigma)
+
+    # By default, the price is the intrinsic value. This handles all degenerate cases.
+    if opt_type.upper() == 'C':
+        prices = np.maximum(F - K, 0.0)
+    else:
+        prices = np.maximum(K - F, 0.0)
+
+    # Identify the subset of options where the Black-76 formula is valid
+    valid_mask = (sigma > 1e-9) & (T > 0) & (K > 0)
+
+    # Only perform calculations on the valid subset to avoid math errors (e.g., division by zero)
+    if np.any(valid_mask):
+        # Select only the valid elements for the calculation
+        K_v = K[valid_mask]
+        sigma_v = sigma[valid_mask]
+
+        d1 = (np.log(F / K_v) + 0.5 * sigma_v**2 * T) / (sigma_v * np.sqrt(T))
+        d2 = d1 - sigma_v * np.sqrt(T)
+
+        if opt_type.upper() == 'C':
+            formula_prices = F * norm.cdf(d1) - K_v * norm.cdf(d2)
+        else:
+            formula_prices = K_v * norm.cdf(-d2) - F * norm.cdf(-d1)
+        
+        # Use np.where to combine results: where the mask is True, use the formula price,
+        # otherwise, keep the default intrinsic value.
+        prices = np.where(valid_mask, formula_prices, prices)
+    
+    return prices
 
 def black76_iv(F: float, T: float, K: float, price: float, opt_type: str = 'C') -> float:
     """

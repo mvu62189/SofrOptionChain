@@ -9,7 +9,7 @@ from sabr_run import load_and_prepare
 from black76 import black76_iv, b76_price
 
 
-def price_from_sabr(strikes, F, T, alpha, beta, rho, nu):
+def price_from_sabr_old_non_vectorized(strikes, F, T, alpha, beta, rho, nu):
     """Price European options using SABR-fitted vols under Bachelier model."""
     prices = []
     for K in strikes:
@@ -19,6 +19,20 @@ def price_from_sabr(strikes, F, T, alpha, beta, rho, nu):
         p = b76_price(F, K, T, sigma)
         prices.append(p)
     return np.array(prices)
+
+# VECTORIZED 
+def price_from_sabr(strikes, F, T, alpha, beta, rho, nu):
+    """
+    Price European options using SABR-fitted vols under Black76 model.
+    This version is fully vectorized for performance and stability.
+    """
+    # 1. Calculate all volatilities at once, since sabr_vol_lognormal is vectorized.
+    sigmas = sabr_vol_lognormal(F, strikes, T, alpha, beta, rho, nu)
+
+    # 2. Calculate all prices at once, since b76_price is vectorized.
+    prices = b76_price(F, strikes, T, sigmas)
+    
+    return prices
 
 def second_derivative(f, x, h=None):
     """
