@@ -184,13 +184,13 @@ if files_to_plot:
             traces.append(go.Surface(
                 x=grid_T, y=grid_K, z=grid_Z_model_filled, 
                 colorscale='plasma', 
-                name='Model Surface', 
+                name='Sabr Surface', 
                 opacity=0.7, 
                 showlegend=True, showscale=False, 
                 visible='legendonly',
                 connectgaps=True))
         else:
-            st.warning("Model Surface could not be generated. Requires at least 2 chains with valid SABR calibrations.")
+            st.warning("Sabr Surface could not be generated. Requires at least 2 chains with valid SABR calibrations.")
         
         traces.append(go.Scatter3d(x=points[:, 0], y=points[:, 1], z=points[:, 2], mode='markers', marker=dict(size=2, color='green'), name='Raw Market Data'))
         skew_strikes = np.linspace(min_K, max_K, NUM_K_POINTS)
@@ -204,7 +204,7 @@ if files_to_plot:
 
         z_min_all = np.nanmin(points[:, 2]) * 0.8
         z_max_all = np.nanmax(points[:, 2]) * 1.2
-        fig.update_layout(title="Market vs. Model Surface", height=800, legend=dict(x=0.8, y=0.95, bgcolor='rgba(0,0,0,0.5)', font=dict(color='white')), scene=dict(xaxis=dict(title='Time to Maturity', range=[min_T, max_T * 1.1], showbackground=True, backgroundcolor='rgba(20, 24, 33, 0.8)'), yaxis=dict(title='Strike', range=[min_K * 0.99, max_K], showbackground=True, backgroundcolor='rgba(20, 24, 33, 0.8)'), zaxis=dict(title=plot_type, range=[z_min_all, z_max_all], showbackground=False)))
+        fig.update_layout(title="Market vs. Sabr Surface", height=800, legend=dict(x=0.8, y=0.95, bgcolor='rgba(0,0,0,0.5)', font=dict(color='white')), scene=dict(xaxis=dict(title='Time to Maturity', range=[min_T, max_T * 1.1], showbackground=True, backgroundcolor='rgba(20, 24, 33, 0.8)'), yaxis=dict(title='Strike', range=[min_K * 0.99, max_K], showbackground=True, backgroundcolor='rgba(20, 24, 33, 0.8)'), zaxis=dict(title=plot_type, range=[z_min_all, z_max_all], showbackground=False)))
         
         # --- APPLY THE SAVED CAMERA STATE ---
         # Before rendering, check if we have a saved camera angle and apply it
