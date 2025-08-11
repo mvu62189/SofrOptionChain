@@ -186,7 +186,7 @@ def run_snapshot(output_dir=None, futures_list=None):
                 continue
 
             # Get strike
-            df['strike'] = df['ticker'].str.extract(r'(\d+\.\d+|\d+)').astype(float)
+            #df['strike'] = df['ticker'].str.extract(r'(\d+\.\d+|\d+)').astype(float)
 
             try:
                 m_code = code[3]

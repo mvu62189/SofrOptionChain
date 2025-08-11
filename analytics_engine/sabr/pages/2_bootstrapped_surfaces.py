@@ -6,7 +6,7 @@ import pandas as pd
 import plotly.graph_objects as go
 from scipy.interpolate import griddata, interp1d
 import os
-from streamlit_plotly_events import plotly_events
+#from streamlit_plotly_events import plotly_events
 
 # Import necessary functions from your existing modules
 from mdl_load import discover_snapshot_files
@@ -54,19 +54,34 @@ def prepare_surface_data(file_paths, plot_type):
         "all_strikes": all_strikes
     }
 
-file_dict = discover_snapshot_files("snapshots")
+
 
 # --- Sidebar for User Controls ---
 with st.sidebar:
     st.markdown("### Surface Controls")
     
+    file_dict = discover_snapshot_files("snapshots")
+    all_folders = list(file_dict.keys())
+    
     def update_shared_folder():
+        """Called when the folder selectbox changes"""
         st.session_state.shared_folder = st.session_state.folder_selector
-        # When folder changes, we should clear the multiselect for files
-        if 'file_selector' in st.session_state:
+        # When folder changes, reset the file selection to all files in the new folder
+        new_folder_files = file_dict.get(st.session_state.folder_selector, [])
+        st.session_state.file_selector = new_folder_files
+
+    def sync_multiselect_from_checkbox():
+        """Called when the 'Select All' checkbox changes."""
+        select_all = st.session_state.get('select_all_chains', True)
+        files_in_folder = file_dict.get(st.session_state.folder_selector, [])
+        if select_all:
+            st.session_state.file_selector = files_in_folder
+        else:
             st.session_state.file_selector = []
 
-    all_folders = list(file_dict.keys())
+    
+    
+    # Widget Creation
     default_index = 0
     if 'shared_folder' in st.session_state and st.session_state.shared_folder in all_folders:
         default_index = all_folders.index(st.session_state.shared_folder)
@@ -87,13 +102,26 @@ with st.sidebar:
     files_to_plot = []
     if selected_folder:
         files_in_folder = file_dict.get(selected_folder, [])
+
+        # Determine if the "Select All" box should be checked
+        is_all_selected = len(st.session_state.get('file_selector', files_in_folder)) == len(files_in_folder)
+
+        # --- "SELECT ALL" CHECKBOX ---
+        st.checkbox(
+            "Select All Chains",
+            value=is_all_selected,
+            key='select_all_chains',
+            on_change=sync_multiselect_from_checkbox
+        )
+
         files_to_plot = st.multiselect(
             "Select Chains to Include",
             options=files_in_folder,
-            default=files_in_folder,
             format_func=os.path.basename,
-            key='file_selector' # Add a key here
+            key='file_selector' # Add key links it to the callbacks
         )
+
+    st.markdown("---")
 
     plot_type = st.radio("Select Surface", ("Implied Volatility (IV)", "Risk-Neutral Density (RND)"),
         horizontal=True,
@@ -175,8 +203,10 @@ if files_to_plot:
             df_Z_model.interpolate(method='linear', axis=0, limit_direction='both', inplace=True)
             
             # 3. Fill any remaining NaNs (e.g., if a whole column is NaN) using backfill
-            df_Z_model.fillna(method='bfill', inplace=True)
-            
+            df_Z_model.bfill(inplace=True)
+            # NEED TO REVISIT THIS: NEED BETTER FILL FOR EXTREME ILLIQUID CHAINS
+
+
             # 4. Convert back to a NumPy array for plotting
             grid_Z_model_filled = df_Z_model.values
             # --- END OF POST PROCESS FIX ---

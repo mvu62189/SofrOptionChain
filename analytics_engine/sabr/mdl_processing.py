@@ -14,14 +14,56 @@ def process_snapshot_file(parquet_path, manual_params):
     df_raw = pd.read_parquet(parquet_path)
     df = df_raw.copy()
 
-    # Extract strike from ticker
-    df['strike'] = df['ticker'].str.extract(r'\b(\d+\.\d+)\b')[0].astype(float)
+    ####--- Extract strike from ticker ---#####
+    # This logic prioritizes parsing the ticker, which is the most reliable source.
+
+    if 'ticker' not in df.columns:
+        st.error(f"Critical 'ticker' column missing in {os.path.basename(parquet_path)}. Cannot process.")
+        return None
+
+    # 1. Define a highly specific regex to capture the strike price.
+    # It looks for a 'C' or 'P' followed by the number.
+    # Example: "SFRZ7C 94.625" -> "94.625"
+    strike_regex = r'[CP]\s*(\d+(?:\.\d+)?)'
+
+    # 2. Extract strikes from the reliable 'ticker' column.
+    df['strike'] = df['ticker'].str.extract(strike_regex, expand=False)
+    df['strike'] = pd.to_numeric(df['strike'], errors='coerce')
+
+    # 3. As a fallback, fill any remaining missing strikes with 'opt_strike_px'.
+    if 'opt_strike_px' in df.columns:
+        # Create a temporary numeric version of opt_strike_px
+        opt_strike_numeric = pd.to_numeric(df['opt_strike_px'], errors='coerce')
+        df['strike'].fillna(opt_strike_numeric, inplace=True)
+
+    # 4. Ensure the final strike column is clean and numeric.
+    df.dropna(subset=['strike'], inplace=True)
+    if df.empty:
+        st.warning(f"Could not determine any valid strikes for {os.path.basename(parquet_path)}.")
+        return None
+    # --- END OF DEFINITIVE STRIKE FIX ---
+
+
+    # df['strike'] = df['ticker'].str.extract(r'\b(\d+\.\d+)\b')[0].astype(float)
     
     # Filter for strikes with active bid/ask
     liquid = df[(df['bid']>0)&(df['ask']>0)]
     if liquid.empty: return None
     lo, hi = liquid['strike'].min(), liquid['strike'].max()
     df_trim = df[(df['strike']>=lo)&(df['strike']<=hi)].reset_index(drop=True)
+
+    # --- START OF FIX: Robustly ensure 'type' column exists ---
+    if 'type' not in df_trim.columns:
+        if 'ticker' in df_trim.columns:
+            st.warning(f"File {os.path.basename(parquet_path)} is missing 'type' column. Recreating from ticker.")
+            df_trim['type'] = df_trim['ticker'].str.extract(r'([CP])\b', expand=False)
+        else:
+            st.error(f"Cannot determine option type for {os.path.basename(parquet_path)}. Missing 'type' and 'ticker' columns.")
+            return None
+    
+    df_trim.dropna(subset=['type'], inplace=True)
+    df_trim['type'] = df_trim['type'].str.upper()
+    # --- END OF FIX ---
 
     # Get mid price
     df_trim['mid_price'] = np.where((df_trim['bid']>0)&(df_trim['ask']>0), 0.5*(df_trim['bid']+df_trim['ask']), np.nan)
@@ -30,6 +72,7 @@ def process_snapshot_file(parquet_path, manual_params):
     F = float(df_trim['future_px'].iloc[0])
     df_otm = df_trim[((df_trim['type']=='C')&(df_trim['strike']>F))|((df_trim['type']=='P')&(df_trim['strike']<F))].reset_index(drop=True)
     df_otm = df_otm.sort_values(by='strike').reset_index(drop=True)
+    
     if df_otm.empty: return None
     snap_dt = datetime.strptime(df_otm['snapshot_ts'].iloc[0], '%Y%m%d %H%M%S')
     expiry = pd.to_datetime(df_otm['expiry_date'].iloc[0]).date()
@@ -69,7 +112,7 @@ def process_snapshot_file(parquet_path, manual_params):
     # --- END OF FIX ---
 
     df_otm['spread'] = df_otm['ask'] - df_otm['bid']
-    df_otm = df_otm[df_otm['spread']<=0.012]    
+    #df_otm = df_otm[df_otm['spread']<=0.012]    
 
     strikes = df_otm['strike'].values
     market_iv = df_otm['iv'].values
