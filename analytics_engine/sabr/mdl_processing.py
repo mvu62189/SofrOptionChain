@@ -10,15 +10,35 @@ from mdl_calibration import fit_sabr_de, fit_sabr
 from mdl_rnd_utils import market_rnd, model_rnd
 
 @st.cache_data(show_spinner="Calibrating...", persist=True)
-def process_snapshot_file(parquet_path, manual_params):
-    df_raw = pd.read_parquet(parquet_path)
+def process_snapshot_file(parquet_path, manual_params, df_input=None):
+    # Logic to accept df and parquet as input
+    source_name = ""
+    if parquet_path:
+        source_name = os.path.basename(parquet_path)
+    elif df_input is not None and not df_input.empty:
+        # If we get a dataframe, create a name from its expiry code or date
+        if 'expiry_code' in df_input.columns:
+            source_name = f"data for {df_input['expiry_code'].iloc[0]}"
+        elif 'expiry_date' in df_input.columns:
+            source_name = f"data for {pd.to_datetime(df_input['expiry_date'].iloc[0]).date()}"
+        else:
+            source_name = "an input DataFrame"
+            
+    if df_input is not None:
+        df_raw = df_input
+    elif parquet_path:
+        df_raw = pd.read_parquet(parquet_path)
+    else:
+        st.error("process_snapshot_file requires either a parquet_path or a df_input.")
+        return None
+    
     df = df_raw.copy()
 
     ####--- Extract strike from ticker ---#####
     # This logic prioritizes parsing the ticker, which is the most reliable source.
 
     if 'ticker' not in df.columns:
-        st.error(f"Critical 'ticker' column missing in {os.path.basename(parquet_path)}. Cannot process.")
+        st.error(f"Critical 'ticker' column missing in {source_name}. Cannot process.")
         return None
 
     # 1. Define a highly specific regex to capture the strike price.
@@ -34,12 +54,12 @@ def process_snapshot_file(parquet_path, manual_params):
     if 'opt_strike_px' in df.columns:
         # Create a temporary numeric version of opt_strike_px
         opt_strike_numeric = pd.to_numeric(df['opt_strike_px'], errors='coerce')
-        df['strike'].fillna(opt_strike_numeric, inplace=True)
+        df['strike'] = df['strike'].fillna(opt_strike_numeric)
 
     # 4. Ensure the final strike column is clean and numeric.
     df.dropna(subset=['strike'], inplace=True)
     if df.empty:
-        st.warning(f"Could not determine any valid strikes for {os.path.basename(parquet_path)}.")
+        st.warning(f"Could not determine any valid strikes for {source_name}.")
         return None
     # --- END OF DEFINITIVE STRIKE FIX ---
 
@@ -55,20 +75,28 @@ def process_snapshot_file(parquet_path, manual_params):
     # --- START OF FIX: Robustly ensure 'type' column exists ---
     if 'type' not in df_trim.columns:
         if 'ticker' in df_trim.columns:
-            st.warning(f"File {os.path.basename(parquet_path)} is missing 'type' column. Recreating from ticker.")
+            st.warning(f"File {source_name} is missing 'type' column. Recreating from ticker.")
             df_trim['type'] = df_trim['ticker'].str.extract(r'([CP])\b', expand=False)
         else:
-            st.error(f"Cannot determine option type for {os.path.basename(parquet_path)}. Missing 'type' and 'ticker' columns.")
+            st.error(f"Cannot determine option type for {source_name}. Missing 'type' and 'ticker' columns.")
             return None
     
     df_trim.dropna(subset=['type'], inplace=True)
+
+    # --- START OF FIX: Add a guard clause here ---
+    # If cleaning the 'type' column removed all rows, the DataFrame is invalid.
+    if df_trim.empty:
+        st.warning(f"No rows with a valid option type found for {source_name}.")
+        return None
+    # --- END OF FIX ---
+
     df_trim['type'] = df_trim['type'].str.upper()
     # --- END OF FIX ---
 
     # Get mid price
     df_trim['mid_price'] = np.where((df_trim['bid']>0)&(df_trim['ask']>0), 0.5*(df_trim['bid']+df_trim['ask']), np.nan)
     
-    df_trim['type'] = df_trim['type'].str.upper()
+    
     F = float(df_trim['future_px'].iloc[0])
     df_otm = df_trim[((df_trim['type']=='C')&(df_trim['strike']>F))|((df_trim['type']=='P')&(df_trim['strike']<F))].reset_index(drop=True)
     df_otm = df_otm.sort_values(by='strike').reset_index(drop=True)
@@ -99,7 +127,7 @@ def process_snapshot_file(parquet_path, manual_params):
         # If no options with volume exist, we cannot determine the liquid strike range.
         # It's safest to skip processing for this file, as per original logic.
         if liquid2.empty:
-            st.warning(f"No options with volume > 0 found in {os.path.basename(parquet_path)}. Skipping file.")
+            st.warning(f"No options with volume > 0 found in {source_name}. Skipping file.")
             return None
         
         # Trim the dataframe to the range of strikes that have trading volume.
@@ -108,7 +136,7 @@ def process_snapshot_file(parquet_path, manual_params):
     else:
         # If the volume column doesn't exist, we can't perform this filter.
         # We'll issue a warning and proceed without this specific trimming step.
-        st.warning(f"'volume' column not found in {os.path.basename(parquet_path)}. Skipping volume-based strike trimming.")
+        st.warning(f"'volume' column not found in {source_name}. Skipping volume-based strike trimming.")
     # --- END OF FIX ---
 
     df_otm['spread'] = df_otm['ask'] - df_otm['bid']
@@ -124,7 +152,7 @@ def process_snapshot_file(parquet_path, manual_params):
     # --- START OF FIX --- DROPPING EMPTY EXPIRIES --------------
     # Add a check here. If no valid options remain after filtering, skip this file.
     if len(strikes_fit) == 0:
-        st.warning(f"No valid data points found to calibrate for {os.path.basename(parquet_path)}. Skipping.")
+        st.warning(f"No valid data points found to calibrate for {source_name}. Skipping.")
         return None
     # --- END OF FIX ---
 
@@ -134,7 +162,7 @@ def process_snapshot_file(parquet_path, manual_params):
     
     # This check is also good practice, in case calibration fails
     if len(iv_model_fit) == 0:
-        st.warning(f"SABR calibration failed for {os.path.basename(parquet_path)}. Skipping.")
+        st.warning(f"SABR calibration failed for {source_name}. Skipping.")
         return None
 
     recalibrate = manual_params.get('recalibrate', False) # Safely get recalibrate flag

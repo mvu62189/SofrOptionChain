@@ -42,7 +42,7 @@ def load_and_process_all_snapshots(folder_paths):
         if df.empty:
             continue
 
-        # --- START OF DEFINITIVE STRIKE FIX (APPLIED DIRECTLY) ---
+        # --- START OF DEFINITIVE STRIKE FIX ---
         if 'ticker' not in df.columns:
             st.warning(f"Skipping file {os.path.basename(file_path)}: missing 'ticker' column.")
             continue
