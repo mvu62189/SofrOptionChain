@@ -36,14 +36,18 @@ def load_and_process_data_for_all_timestamps():
 
     # 1. Load all data into a single DataFrame
     df_list = [pd.read_parquet(f) for f in all_files]
+    df_list = [df for df in df_list if not df.empty]
+    if not df_list:
+        return {}
+
     full_df = pd.concat(df_list, ignore_index=True)
 
     # 2. Clean and correct the strike column definitively
     strike_regex = r'[CP]\s*(\d+(?:\.\d+)?)'
     full_df['strike'] = pd.to_numeric(full_df['ticker'].str.extract(strike_regex, expand=False), errors='coerce')
     if 'opt_strike_px' in full_df.columns:
-        full_df['strike'].fillna(pd.to_numeric(full_df['opt_strike_px'], errors='coerce'), inplace=True)
-    full_df.dropna(subset=['strike'], inplace=True)
+        opt_strike_numeric = pd.to_numeric(full_df['opt_strike_px'], errors='coerce')
+        full_df['strike'] = full_df['strike'].fillna(opt_strike_numeric)
 
     # 3. Group by snapshot time and process each snapshot independently
     processed_data = {}

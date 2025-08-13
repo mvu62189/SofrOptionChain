@@ -132,7 +132,7 @@ def b76_vega(F: float, T: float, K, sigma):
     Vectorized Black-76 Vega: ∂Price/∂σ = F * φ(d1) * sqrt(T)
     where d1 = [ln(F/K) + 0.5 σ^2 T] / (σ √T).
 
-    This version is robust and handles both scalar and numpy array inputs for K and sigma.
+    This version both scalar and numpy array inputs for K and sigma.
     """
     # First, handle the simple case of scalar inputs.
     if np.isscalar(K):
