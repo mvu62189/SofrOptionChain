@@ -162,7 +162,7 @@ if files_to_plot:
         # --- Interpolation, Trace Creation, and Plotting ---
         NUM_T_POINTS, NUM_K_POINTS = 100, 100
         grid_T, grid_K = np.mgrid[min_T:max_T:complex(NUM_T_POINTS), min_K:max_K:complex(NUM_K_POINTS)]
-        grid_Z_market = griddata(points[:, :2], points[:, 2], (grid_T, grid_K), method=interp_method)
+        grid_Z_market  = griddata(points[:, :2], points[:, 2], (grid_T, grid_K), method=interp_method)
 
         traces = []
         # --- FIX #1: CORRECT LEGEND CONFIGURATION ---
@@ -170,49 +170,49 @@ if files_to_plot:
 
         if len(model_params_by_T) >= 2:
             df_params = pd.DataFrame(model_params_by_T).sort_values('T').drop_duplicates('T')
-            alpha_interp = interp1d(df_params['T'], df_params['alpha'], kind=interp_method, fill_value="extrapolate")
-            beta_interp = interp1d(df_params['T'], df_params['beta'], kind=interp_method, fill_value="extrapolate")
-            rho_interp = interp1d(df_params['T'], df_params['rho'], kind=interp_method, fill_value="extrapolate")
-            nu_interp = interp1d(df_params['T'], df_params['nu'], kind=interp_method, fill_value="extrapolate")
-            F_interp = interp1d(df_params['T'], df_params['F'], kind=interp_method, fill_value="extrapolate")
+            alpha_interp = interp1d(df_params['T'], df_params['alpha'], kind=interp_method, bounds_error=False, fill_value=np.nan)
+            beta_interp  = interp1d(df_params['T'], df_params['beta'],  kind=interp_method, bounds_error=False, fill_value=np.nan)
+            rho_interp   = interp1d(df_params['T'], df_params['rho'],   kind=interp_method, bounds_error=False, fill_value=np.nan)
+            nu_interp    = interp1d(df_params['T'], df_params['nu'],    kind=interp_method, bounds_error=False, fill_value=np.nan)
+            F_interp     = interp1d(df_params['T'], df_params['F'],     kind=interp_method, bounds_error=False, fill_value=np.nan)
             grid_Z_model = np.zeros_like(grid_T)
             for i in range(grid_T.shape[0]):
                 t = grid_T[i, 0]
                 # Get extrapolated parameters and clip them to valid physical ranges
                 alpha = float(np.clip(alpha_interp(t), 1e-6, 10.0)) # Alpha must be positive
-                beta = float(np.clip(beta_interp(t), 0.0, 1.0))     # Beta is between 0 and 1
-                rho = float(np.clip(rho_interp(t), -0.9999, 0.9999)) # Rho must be between -1 and 1
-                nu = float(np.clip(nu_interp(t), 1e-6, 10.0))     # Nu must be positive
+                beta  = float(np.clip(beta_interp(t), 0.0, 1.0))     # Beta is between 0 and 1
+                rho   = float(np.clip(rho_interp(t), -0.9999, 0.9999)) # Rho must be between -1 and 1
+                nu    = float(np.clip(nu_interp(t), 1e-6, 10.0))     # Nu must be positive
                 
                 # Get the interpolated forward and clip it to ensure it's positive
                 F = float(np.clip(F_interp(t), 1e-6, None))
                 
-                params = {'alpha': alpha, 'beta': beta, 'rho': rho, 'nu': nu}                
+                params        = {'alpha': alpha, 'beta': beta, 'rho': rho, 'nu': nu}                
                 strikes_slice = grid_K[i, :]
                 
-                result_slice = sabr_vol_lognormal(F, strikes_slice, t, **params) if "IV" in plot_type else model_rnd(strikes_slice, F, t, params)
+                result_slice       = sabr_vol_lognormal(F, strikes_slice, t, **params) if "IV" in plot_type else model_rnd(strikes_slice, F, t, params)
                 grid_Z_model[i, :] = result_slice.flatten()
             
-            # --- Post-process the Z-matrix to fill gaps ---
+            # --- Post-process the Z-matrix to fill gaps ---                            ### COMMENTED OUT DUE TO UNSTABLE EXTRAPOLATE ###
             # 1. Replace any infinities with NaN, as they are unplottable.
-            grid_Z_model[~np.isfinite(grid_Z_model)] = np.nan
+            #grid_Z_model[~np.isfinite(grid_Z_model)] = np.nan
 
             # 2. Use pandas to interpolate over the NaNs along the time axis (axis=0).
             #    This is very effective at filling in missing rows caused by extrapolation issues.
-            df_Z_model = pd.DataFrame(grid_Z_model)
-            df_Z_model.interpolate(method='linear', axis=0, limit_direction='both', inplace=True)
+            #df_Z_model = pd.DataFrame(grid_Z_model)
+            #df_Z_model.interpolate(method='linear', axis=0, limit_direction='both', inplace=True)
             
             # 3. Fill any remaining NaNs (e.g., if a whole column is NaN) using backfill
-            df_Z_model.bfill(inplace=True)
+            #df_Z_model.bfill(inplace=True)
             # NEED TO REVISIT THIS: NEED BETTER FILL FOR EXTREME ILLIQUID CHAINS
 
 
             # 4. Convert back to a NumPy array for plotting
-            grid_Z_model_filled = df_Z_model.values
+            #grid_Z_model_filled = df_Z_model.values
             # --- END OF POST PROCESS FIX ---
 
             traces.append(go.Surface(
-                x=grid_T, y=grid_K, z=grid_Z_model_filled, 
+                x=grid_T, y=grid_K, z=grid_Z_model, 
                 colorscale='plasma', 
                 name='Sabr Surface', 
                 opacity=0.7, 

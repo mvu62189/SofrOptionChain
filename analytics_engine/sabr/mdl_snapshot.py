@@ -8,7 +8,7 @@ import pandas as pd
 
 from pandas.tseries.holiday import USFederalHolidayCalendar
 try:
-    # Attempt to import the real libraries
+    # Attempt to import the libraries
     from xbbg import blp
     import blpapi
     BLOOMBERG_AVAILABLE = True
