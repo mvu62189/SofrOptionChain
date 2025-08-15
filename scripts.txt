@@ -2,5 +2,5 @@ streamlit run analytics_engine/sabr/mdl_run.py
 
 Set-ExecutionPolicy -Scope Process -ExecutionPolicy Bypass
 
-.\setup_bloom_env.ps1
+.\setup_bloom_env_v2.ps1
 
