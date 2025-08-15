@@ -21,16 +21,24 @@ def price_from_sabr_old_non_vectorized(strikes, F, T, alpha, beta, rho, nu):
     return np.array(prices)
 
 # VECTORIZED 
-def price_from_sabr(strikes, F, T, alpha, beta, rho, nu):
+def price_from_sabr(strikes, F, T, alpha, beta, rho, nu, model_engine='black76'):
     """
-    Price European options using SABR-fitted vols under Black76 model.
-    This version is fully vectorized for performance and stability.
+    Price European options using SABR-fitted vols under Black76/Bach model. Is model aware.
+    This version is fully vectorized.
     """
     # 1. Calculate all volatilities at once, since sabr_vol_lognormal is vectorized.
-    sigmas = sabr_vol_lognormal(F, strikes, T, alpha, beta, rho, nu)
+    #sigmas = sabr_vol_lognormal(F, strikes, T, alpha, beta, rho, nu)
 
     # 2. Calculate all prices at once, since b76_price is vectorized.
-    prices = b76_price(F, strikes, T, sigmas)
+    #prices = b76_price(F, strikes, T, sigmas)
+
+    if model_engine == 'black76':
+        sigmas = sabr_vol_lognormal(F, strikes, T, alpha, beta, rho, nu)
+        prices = b76_price(F, strikes, T, sigmas)
+    else:  # bachelier
+        # For the normal model, beta is implicitly 0.
+        sigmas = sabr_vol_normal(F, strikes, T, alpha, rho, nu)
+        prices = bachelier_price(F, strikes, T, sigmas)
     
     return prices
 

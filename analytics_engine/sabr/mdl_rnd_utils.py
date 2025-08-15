@@ -47,7 +47,7 @@ def market_rnd_old(strikes: np.ndarray, mid_prices: np.ndarray) -> np.ndarray:
     result[result == 0.0] = np.nan
     return result
 
-def market_rnd(strikes: np.ndarray, mid_prices: np.ndarray) -> np.ndarray:
+def market_rnd(strikes: np.ndarray, mid_prices: np.ndarray, F: float, T: float, model_engine: str = 'black76') -> np.ndarray:
     """
     Smooth Breeden–Litzenberger RND:
       1) drop zero‐price strikes (illiquid)
@@ -180,7 +180,7 @@ def market_rnd_xprmt(strikes: np.ndarray, mid_prices: np.ndarray) -> np.ndarray:
     return np.clip(rnd_on_strikes, a_min=0.0, a_max=None)
 
 def model_rnd(strikes: np.ndarray, F: float, T: float,
-              params: Dict[str, float]) -> np.ndarray:
+              params: Dict[str, float], model_engine: str = 'black76') -> np.ndarray:
     """
     Compute SABR-based RND using calibrated params.
     """
@@ -188,7 +188,8 @@ def model_rnd(strikes: np.ndarray, F: float, T: float,
                                    alpha=params['alpha'],
                                    beta=params['beta'],
                                    rho=params['rho'],
-                                   nu=params['nu'])
+                                   nu=params['nu'],
+                                   model_engine=model_engine)
     rnd_raw = np.gradient(np.gradient(model_prices, strikes), strikes)
     rnd = np.clip(rnd_raw, a_min=0.0, a_max=None)
     area = np.trapezoid(rnd, strikes)

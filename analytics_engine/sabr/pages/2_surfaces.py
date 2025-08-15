@@ -11,7 +11,7 @@ import os
 # Import necessary functions from your existing modules
 from mdl_load import discover_snapshot_files
 from mdl_processing import process_snapshot_file  # We reuse the main processing function
-from sabr_v2 import sabr_vol_lognormal
+from sabr_v2 import sabr_vol_lognormal, sabr_vol_normal
 from mdl_rnd_utils import model_rnd
 
 st.set_page_config(layout="wide")
@@ -23,15 +23,15 @@ st.info(
 
 # --- CACHE THE ENTIRE DATA PREPARATION STEP ---
 @st.cache_data(show_spinner="Processing and calibrating selected files...")
-def prepare_surface_data(file_paths, plot_type):
+def prepare_surface_data(file_paths, plot_type, model_engine):
     """
     Takes a list of file paths, processes them, and returns all data needed for plotting.
     This entire block is cached, so it only runs when the list of files changes.
     """
     market_points, model_params_by_T, all_strikes = [], [], []
     for file_path in file_paths:
-        res = process_snapshot_file(file_path, manual_params={})
-        if res:
+        res, reason = process_snapshot_file(file_path, manual_params={}, model_engine=model_engine)
+        if reason is None and res:
             df_temp = pd.read_parquet(file_path)
             snap_dt = pd.to_datetime(df_temp['snapshot_ts'].iloc[0].split(" ")[0])
             expiry_dt = pd.to_datetime(df_temp['expiry_date'].iloc[0])
@@ -60,6 +60,16 @@ def prepare_surface_data(file_paths, plot_type):
 with st.sidebar:
     st.markdown("### Surface Controls")
     
+    # --- ADD MODEL ENGINE TOGGLE ---
+    model_engine_display = st.radio(
+        "Select Pricing Model",
+        ('Black-76 (Lognormal)', 'Bachelier (Normal)'),
+        horizontal=True,
+        key='model_engine_selector'
+    )
+    model_engine = 'bachelier' if 'Bachelier' in model_engine_display else 'black76'
+    st.markdown("---")
+
     file_dict = discover_snapshot_files("snapshots")
     all_folders = list(file_dict.keys())
     
@@ -142,15 +152,30 @@ if 'camera' not in st.session_state:
 
 # --- MAIN PANEL FOR PLOTTING ---
 if files_to_plot:
-    surface_data = prepare_surface_data(tuple(files_to_plot), plot_type)
+    surface_data = prepare_surface_data(tuple(files_to_plot), plot_type, model_engine)
 
     if not surface_data:
         st.error("No valid data points could be extracted from the selected files.")
     else:
         points = surface_data["market_points"]
         model_params_by_T = surface_data["model_params_by_T"]
-        min_T, max_T = points[:, 0].min(), points[:, 0].max()
+        #min_T, max_T = points[:, 0].min(), points[:, 0].max()
+        #min_K, max_K = min(surface_data["all_strikes"]), max(surface_data["all_strikes"])
+
+        # --- START OF FIX ---  # SABR SURFACE NOT SHOWING
+        # First, build the DataFrame of successful calibrations
+        df_params = pd.DataFrame(model_params_by_T).sort_values('T').drop_duplicates('T')
+
+        # Derive the VALID min/max T and K from the available data
         min_K, max_K = min(surface_data["all_strikes"]), max(surface_data["all_strikes"])
+        
+        # Use the min/max T from the SUCCESSFUL calibrations for the grid and sliders
+        if not df_params.empty:
+            min_T, max_T = df_params['T'].min(), df_params['T'].max()
+        else: # Fallback if no calibrations succeeded
+            min_T, max_T = points[:, 0].min(), points[:, 0].max()
+        # --- END OF FIX ---
+
 
         # --- FIX #2: CREATE SLIDERS IN SIDEBAR AFTER DATA IS LOADED ---
         with st.sidebar:
@@ -190,7 +215,16 @@ if files_to_plot:
                 params        = {'alpha': alpha, 'beta': beta, 'rho': rho, 'nu': nu}                
                 strikes_slice = grid_K[i, :]
                 
-                result_slice       = sabr_vol_lognormal(F, strikes_slice, t, **params) if "IV" in plot_type else model_rnd(strikes_slice, F, t, params)
+                # --- MAKE SABR CALCULATION MODEL-AWARE ---
+                if "IV" in plot_type:
+                    if model_engine == 'black76':
+                        result_slice = sabr_vol_lognormal(F, strikes_slice, t, **params)
+                    else: # bachelier
+                        result_slice = sabr_vol_normal(F, strikes_slice, t, alpha, rho, nu)
+                else: # RND
+                    result_slice = model_rnd(strikes_slice, F, t, params, model_engine=model_engine)
+
+                #result_slice       = sabr_vol_lognormal(F, strikes_slice, t, **params) if "IV" in plot_type else model_rnd(strikes_slice, F, t, params)
                 grid_Z_model[i, :] = result_slice.flatten()
             
             # --- Post-process the Z-matrix to fill gaps ---                            ### COMMENTED OUT DUE TO UNSTABLE EXTRAPOLATE ###
@@ -218,7 +252,7 @@ if files_to_plot:
                 opacity=0.7, 
                 showlegend=True, showscale=False, 
                 visible='legendonly',
-                connectgaps=True))
+                connectgaps=False))
         else:
             st.warning("Sabr Surface could not be generated. Requires at least 2 chains with valid SABR calibrations.")
         

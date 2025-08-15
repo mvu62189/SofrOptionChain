@@ -1,0 +1,41 @@
+2025-08-14 17:27:16,767 [INFO] [SFRU5] total tickers: 422
+2025-08-14 17:27:18,531 [WARNING] [SKIP] SFRQ5: Chain dropped, missing bid/ask columns.
+2025-08-14 17:27:20,136 [INFO] [SAVE] SFRU5 -> SFRU5_sep.parquet
+2025-08-14 17:27:20,358 [INFO] [SFRZ5] total tickers: 588
+2025-08-14 17:27:22,192 [WARNING] [SKIP] SFRV5: Chain dropped, missing bid/ask columns.
+2025-08-14 17:27:24,395 [WARNING] [SKIP] SFRX5: Chain dropped, missing bid/ask columns.
+2025-08-14 17:27:25,949 [INFO] [SAVE] SFRZ5 -> SFRZ5_dec.parquet
+2025-08-14 17:27:26,111 [INFO] [SFRH6] total tickers: 396
+2025-08-14 17:27:27,772 [WARNING] [SKIP] SFRF6: Chain dropped, missing bid/ask columns.
+2025-08-14 17:27:29,311 [WARNING] [SKIP] SFRH6: Chain dropped, missing bid/ask columns.
+2025-08-14 17:27:29,459 [INFO] [SFRM6] total tickers: 210
+2025-08-14 17:27:31,143 [WARNING] [SKIP] SFRM6: Chain dropped, missing bid/ask columns.
+2025-08-14 17:27:31,295 [INFO] [SFRU6] total tickers: 148
+2025-08-14 17:27:32,900 [WARNING] [SKIP] SFRU6: Chain dropped, missing bid/ask columns.
+2025-08-14 17:27:33,101 [INFO] [SFRZ6] total tickers: 150
+2025-08-14 17:27:34,747 [INFO] [SAVE] SFRZ6 -> SFRZ6_dec.parquet
+2025-08-14 17:27:34,929 [INFO] [SFRH7] total tickers: 142
+2025-08-14 17:27:36,590 [WARNING] [SKIP] SFRH7: Chain dropped, missing bid/ask columns.
+2025-08-14 17:27:36,725 [INFO] [SFRM7] total tickers: 140
+2025-08-14 17:27:38,467 [WARNING] [SKIP] SFRM7: Chain dropped, missing bid/ask columns.
+2025-08-14 17:27:38,613 [INFO] [SFRU7] total tickers: 140
+2025-08-14 17:27:40,283 [WARNING] [SKIP] SFRU7: Chain dropped, missing bid/ask columns.
+2025-08-14 17:27:40,440 [INFO] [SFRZ7] total tickers: 136
+2025-08-14 17:27:42,058 [WARNING] [SKIP] SFRZ7: Chain dropped, missing bid/ask columns.
+2025-08-14 17:27:42,198 [INFO] [SFRH8] total tickers: 136
+2025-08-14 17:27:43,924 [WARNING] [SKIP] SFRH8: Chain dropped, missing bid/ask columns.
+2025-08-14 17:27:44,067 [INFO] [SFRM8] total tickers: 136
+2025-08-14 17:27:45,734 [WARNING] [SKIP] SFRM8: Chain dropped, missing bid/ask columns.
+2025-08-14 17:27:45,889 [INFO] [SFRU28] total tickers: 136
+2025-08-14 17:27:47,644 [WARNING] [SKIP] SFRU8: Chain dropped, missing bid/ask columns.
+2025-08-14 17:27:47,801 [INFO] [SFRZ28] total tickers: 132
+2025-08-14 17:27:49,511 [WARNING] [SKIP] SFRZ8: Chain dropped, missing bid/ask columns.
+2025-08-14 17:27:49,668 [INFO] [SFRH29] total tickers: 124
+2025-08-14 17:27:51,342 [WARNING] [SKIP] SFRH9: Chain dropped, missing bid/ask columns.
+2025-08-14 17:27:51,523 [INFO] [SFRM29] total tickers: 118
+2025-08-14 17:27:53,233 [WARNING] [SKIP] SFRM9: Chain dropped, missing bid/ask columns.
+2025-08-14 17:27:53,384 [WARNING] SFRU29: OPT_CHAIN is empty.
+2025-08-14 17:27:53,517 [WARNING] SFRZ29: OPT_CHAIN is empty.
+2025-08-14 17:27:53,517 [INFO] [SUMMARY] Total futures scanned: 18
+2025-08-14 17:27:53,517 [INFO] [SUMMARY] Output written to: snapshots/20250814/172716
+2025-08-14 17:27:53,518 [INFO] [DONE] Snapshot job complete.

@@ -21,7 +21,7 @@ def load_global_beta() -> float:
     if os.path.exists(GLOBAL_PARAMS_PATH):
         try:
             data = json.load(open(GLOBAL_PARAMS_PATH))
-            return float(data.get("beta", 0))
+            return float(data.get("beta", 0.5))
         except:
             return 0.5
     return 0.5
@@ -318,8 +318,16 @@ def fit_sabr(strikes: np.ndarray, F: float, T: float,
     # Calculate Vega weights. We use the interpolated market vols for this calculation,
     # as this provides a stable set of weights throughout the optimization.
     # Squaring the vega is a common practice for variance-based weighting.
-    vega_weights = b76_vega(F, T, fine_strikes, market_vols_interp) ** 2
     
+    #vega_weights = b76_vega(F, T, fine_strikes, market_vols_interp) ** 2
+    # vvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvv
+    # --- MODEL-AWARE VEGA WEIGHTING ---
+    # Use the Vega corresponding to the selected model for theoretical consistency.
+    if model_engine == 'black76':
+        vega_weights = b76_vega(F, T, fine_strikes, market_vols_interp) ** 2
+    else: # bachelier
+        vega_weights = bachelier_vega(F, T, fine_strikes, market_vols_interp) ** 2
+
     # Normalize weights to prevent the objective function value from becoming too large
     if np.sum(vega_weights) > 0:
         vega_weights /= np.sum(vega_weights)
@@ -350,7 +358,14 @@ def fit_sabr(strikes: np.ndarray, F: float, T: float,
     params: Dict[str, float] = {'alpha': alpha, 'beta': beta, 'rho': rho, 'nu': nu}
     
     # Generate the final model IV curve on the original market strikes for comparison
-    iv_model_on_market_strikes = sabr_vol_lognormal(F, strikes, T, alpha, beta, rho, nu)
+    #iv_model_on_market_strikes = sabr_vol_lognormal(F, strikes, T, alpha, beta, rho, nu)
+
+    # THIS IS THE CRITICAL BLOCK THAT MUST BE MODEL-AWARE
+    # Generate the final model IV curve using the correct model engine
+    if model_engine == 'black76':
+        iv_model_on_market_strikes = sabr_vol_lognormal(F, strikes, T, **params)
+    else: # bachelier
+        iv_model_on_market_strikes = sabr_vol_normal(F, strikes, T, alpha=params['alpha'], rho=params['rho'], nu=params['nu'])
 
     debug_data = {
     "interp_strikes": fine_strikes,
@@ -360,7 +375,8 @@ def fit_sabr(strikes: np.ndarray, F: float, T: float,
 
 
 def fit_sabr_de(strikes: np.ndarray, F: float, T: float,
-                vols: np.ndarray) -> Tuple[Dict[str, float], np.ndarray, Dict]:
+                vols: np.ndarray, model_engine: str = 'black76'
+                ) -> Tuple[Dict[str, float], np.ndarray, Dict]:
     """
     Calibrate SABR using Differential Evolution on an interpolated, Vega-weighted objective function.
     This is a global optimizer and is more robust but slower.
@@ -388,7 +404,10 @@ def fit_sabr_de(strikes: np.ndarray, F: float, T: float,
     market_vols_interp = vol_spline(fine_strikes)
 
     # --- 2. Vega-Weighted Optimization Step ---
-    beta = load_global_beta()
+    #beta = load_global_beta()
+    beta = 1.0 if model_engine == 'black76' else 0.0
+    
+
     vega_weights = b76_vega(F, T, fine_strikes, market_vols_interp) ** 2
     if np.sum(vega_weights) > 0:
         vega_weights /= np.sum(vega_weights)
@@ -398,7 +417,13 @@ def fit_sabr_de(strikes: np.ndarray, F: float, T: float,
     # Objective function for differential_evolution
     def objective(params):
         alpha, rho, nu = params
-        model_vols = sabr_vol_lognormal(F, fine_strikes, T, alpha, beta, rho, nu)
+        
+        if model_engine == 'black76':
+            model_vols = sabr_vol_lognormal(F, fine_strikes, T, alpha, beta, rho, nu)
+        else: # bachelier
+            model_vols = sabr_vol_normal(F, fine_strikes, T, alpha, rho, nu)
+
+        #model_vols = sabr_vol_lognormal(F, fine_strikes, T, alpha, beta, rho, nu)
         error = np.sum(vega_weights * (model_vols - market_vols_interp)**2)
         return error
 
@@ -411,7 +436,15 @@ def fit_sabr_de(strikes: np.ndarray, F: float, T: float,
 
     # --- 4. Return Final Results ---
     params = {'alpha': alpha, 'beta': beta, 'rho': rho, 'nu': nu}
-    iv_model_on_market_strikes = sabr_vol_lognormal(F, strikes, T, **params)
+    
+    # Generate the final curve using the correct model
+    if model_engine == 'black76':
+        iv_model_on_market_strikes = sabr_vol_lognormal(F, strikes, T, **params)
+    else: # bachelier
+        iv_model_on_market_strikes = sabr_vol_normal(F, strikes, T, alpha=params['alpha'], rho=params['rho'], nu=params['nu'])
+
+
+    #iv_model_on_market_strikes = sabr_vol_lognormal(F, strikes, T, **params)
     debug_data = {
         "interp_strikes": fine_strikes,
         "interp_vols": market_vols_interp

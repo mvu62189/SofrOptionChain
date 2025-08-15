@@ -10,7 +10,7 @@ from mdl_calibration import fit_sabr_de, fit_sabr
 from mdl_rnd_utils import market_rnd, model_rnd
 
 @st.cache_data(show_spinner="Calibrating...", persist=True)
-def process_snapshot_file(parquet_path, manual_params, df_input=None):
+def process_snapshot_file(parquet_path, manual_params, df_input=None, model_engine='black76'):
     # Logic to accept df and parquet as input
     source_name = ""
     if parquet_path:
@@ -59,8 +59,8 @@ def process_snapshot_file(parquet_path, manual_params, df_input=None):
     # 4. Ensure the final strike column is clean and numeric.
     df.dropna(subset=['strike'], inplace=True)
     if df.empty:
-        st.warning(f"Could not determine any valid strikes for {source_name}.")
-        return None
+        #st.warning(f"Could not determine any valid strikes for {source_name}.")
+        return None, "Could not determine any valid strikes."
     # --- END OF DEFINITIVE STRIKE FIX ---
 
 
@@ -68,26 +68,26 @@ def process_snapshot_file(parquet_path, manual_params, df_input=None):
     
     # Filter for strikes with active bid/ask
     liquid = df[(df['bid']>0)&(df['ask']>0)]
-    if liquid.empty: return None
+    if liquid.empty: return None, "No options with valid bid/ask prices."
     lo, hi = liquid['strike'].min(), liquid['strike'].max()
     df_trim = df[(df['strike']>=lo)&(df['strike']<=hi)].reset_index(drop=True)
 
     # --- START OF FIX: Robustly ensure 'type' column exists ---
     if 'type' not in df_trim.columns:
         if 'ticker' in df_trim.columns:
-            st.warning(f"File {source_name} is missing 'type' column. Recreating from ticker.")
+            #st.warning(f"File {source_name} is missing 'type' column. Recreating from ticker.")
             df_trim['type'] = df_trim['ticker'].str.extract(r'([CP])\b', expand=False)
         else:
-            st.error(f"Cannot determine option type for {source_name}. Missing 'type' and 'ticker' columns.")
-            return None
+            #st.error(f"Cannot determine option type for {source_name}. Missing 'type' and 'ticker' columns.")
+            return None, "No options with valid bid/ask prices."
     
     df_trim.dropna(subset=['type'], inplace=True)
 
     # --- START OF FIX: Add a guard clause here ---
     # If cleaning the 'type' column removed all rows, the DataFrame is invalid.
     if df_trim.empty:
-        st.warning(f"No rows with a valid option type found for {source_name}.")
-        return None
+        #st.warning(f"No rows with a valid option type found for {source_name}.")
+        return None, "No rows with a valid option type found."
     # --- END OF FIX ---
 
     df_trim['type'] = df_trim['type'].str.upper()
@@ -107,9 +107,18 @@ def process_snapshot_file(parquet_path, manual_params, df_input=None):
     T = (expiry - snap_dt.date()).days/365.0
     
     # Get Black-76 vol
-    df_otm['iv'] = df_otm.apply(lambda r: implied_vol(F=float(r['future_px']), T=T, K=r['strike'], price=r['mid_price'], opt_type=r['type'], engine='black76') if not np.isnan(r['mid_price']) else np.nan, axis=1)
+    #df_otm['iv'] = df_otm.apply(lambda r: implied_vol(F=float(r['future_px']), T=T, K=r['strike'], price=r['mid_price'], opt_type=r['type'], engine='black76') if not np.isnan(r['mid_price']) else np.nan, axis=1)
     
-    
+    # --- Get Black-76 / Bachelier vol based on toggle ---
+    df_otm['iv'] = df_otm.apply(
+        lambda r: implied_vol(
+            F=float(r['future_px']), T=T, K=r['strike'], 
+            price=r['mid_price'], opt_type=r['type'], 
+            engine=model_engine  # Pass the selected engine
+        ) if not np.isnan(r['mid_price']) else np.nan, 
+        axis=1
+    )
+
     #df_otm = df_otm[df_otm['iv']<200]
     
     #liquid2 = df_otm[df_otm['volume']>0]
@@ -119,24 +128,25 @@ def process_snapshot_file(parquet_path, manual_params, df_input=None):
     #df_otm['spread'] = df_otm['ask'] - df_otm['bid']
     #df_otm = df_otm[df_otm['spread']<=0.012]
 
-    # --- New Volume trim Code ---
+    # --- New OINT trim  ---
 
-    if 'volume' in df_otm.columns:
-        liquid2 = df_otm[df_otm['volume'] > 0]
+    if 'rt_open_interest' in df_otm.columns:
+        liquid2 = df_otm[df_otm['rt_open_interest'] > 0]
         
         # If no options with volume exist, we cannot determine the liquid strike range.
         # It's safest to skip processing for this file, as per original logic.
         if liquid2.empty:
-            st.warning(f"No options with volume > 0 found in {source_name}. Skipping file.")
-            return None
+            #st.warning(f"No options with open interest > 0 found in {source_name}. Skipping file.")
+            return None, "No options with open interest > 0 found."
         
         # Trim the dataframe to the range of strikes that have trading volume.
         lo2, hi2 = liquid2['strike'].min(), liquid2['strike'].max()
         df_otm = df_otm[(df_otm['strike'] >= lo2 - 0.52) & (df_otm['strike'] <= hi2 + 0.52)]
     else:
-        # If the volume column doesn't exist, we can't perform this filter.
+        # If the rt_open_interest column doesn't exist, we can't perform this filter.
         # We'll issue a warning and proceed without this specific trimming step.
-        st.warning(f"'volume' column not found in {source_name}. Skipping volume-based strike trimming.")
+        #st.warning(f"'rt_open_interest' column not found in {source_name}. Skipping file.")
+        return None
     # --- END OF FIX ---
 
     df_otm['spread'] = df_otm['ask'] - df_otm['bid']
@@ -152,20 +162,21 @@ def process_snapshot_file(parquet_path, manual_params, df_input=None):
     # --- START OF FIX --- DROPPING EMPTY EXPIRIES --------------
     # Add a check here. If no valid options remain after filtering, skip this file.
     if len(strikes_fit) == 0:
-        st.warning(f"No valid data points found to calibrate for {source_name}. Skipping.")
-        return None
+        #st.warning(f"No valid data points found to calibrate for {source_name}. Skipping.")
+        return None, "Not enough valid data points for calibration (<4)."
     # --- END OF FIX ---
 
     # Automatic calibration
     # params_fast, iv_model_fit, debug_data = fit_sabr(strikes_fit, F, T, vols_fit, method='fast')
-    params_fast, iv_model_fit, debug_data = fit_sabr_de(strikes_fit, F, T, vols_fit)
+    params_fast, iv_model_fit, debug_data = fit_sabr_de(strikes_fit, F, T, vols_fit, model_engine=model_engine)
     
     # This check is also good practice, in case calibration fails
     if len(iv_model_fit) == 0:
-        st.warning(f"SABR calibration failed for {source_name}. Skipping.")
-        return None
+        #st.warning(f"SABR calibration failed for {source_name}. Skipping.")
+        return None, "SABR calibration failed to converge."
 
-    recalibrate = manual_params.get('recalibrate', False) # Safely get recalibrate flag
+
+    recalibrate = manual_params.get('recalibrate', False) # Safety: get recalibrate flag
     # ---  MANUAL CALIBRATION ---
     params_man, iv_manual = (None, None) # Initialize iv_manual as None for plotting
     if recalibrate and st.session_state.get('manual_file') == parquet_path:
@@ -184,9 +195,9 @@ def process_snapshot_file(parquet_path, manual_params, df_input=None):
     # --- END OF CORRECTED SECTION ---
 
     mid_prices = df_otm['mid_price'].values
-    rnd_mkt = market_rnd(strikes, mid_prices)
-    rnd_sabr = model_rnd(strikes, F, T, params_fast)
-    rnd_man  = model_rnd(strikes, F, T, params_man) if params_man else None
+    rnd_mkt = market_rnd(strikes, mid_prices, F, T, model_engine)
+    rnd_sabr = model_rnd(strikes, F, T, params_fast, model_engine=model_engine)
+    rnd_man  = model_rnd(strikes, F, T, params_man, model_engine=model_engine) if params_man else None
 
     area_market = float(np.trapezoid(rnd_mkt, strikes))
     area_model  = float(np.trapezoid(rnd_sabr, strikes))
@@ -200,4 +211,4 @@ def process_snapshot_file(parquet_path, manual_params, df_input=None):
             'area_model': area_model, 'area_market': area_market,
             'forward_price': F,
             'debug_data': debug_data
-            }
+            }, None

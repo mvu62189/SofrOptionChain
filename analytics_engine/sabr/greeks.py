@@ -93,3 +93,73 @@ def calculate_greeks(F, K, T, sigma, opt_type='C'):
         'vanna': vanna,
         'charm': charm
     }
+
+
+def calculate_greeks_bachelier(F, K, T, sigma, opt_type='C'):
+    """
+    Calculates all relevant Bachelier (Normal) Greeks in a vectorized manner.
+    Assumes r=0 for futures options.
+
+    Returns a dictionary of Greek values.
+    """
+    # Ensure inputs are numpy arrays for vectorization
+    K = np.asanyarray(K)
+    sigma = np.asanyarray(sigma)
+
+    # Initialize result arrays with zeros
+    delta = np.zeros_like(K, dtype=float)
+    gamma = np.zeros_like(K, dtype=float)
+    vega = np.zeros_like(K, dtype=float)
+    theta = np.zeros_like(K, dtype=float)
+    vanna = np.zeros_like(K, dtype=float)
+    charm = np.zeros_like(K, dtype=float)
+    
+    # Create a mask of valid conditions for calculation
+    valid_mask = (T > 1e-9) & (sigma > 1e-9)
+    
+    if np.any(valid_mask):
+        # Select only the valid elements for the calculation
+        F_v = F
+        K_v = K[valid_mask]
+        sigma_v = sigma[valid_mask]
+        T_v = T
+
+        sqrt_T = np.sqrt(T_v)
+        d = (F_v - K_v) / (sigma_v * sqrt_T)
+        phi_d = norm.pdf(d)
+
+        # --- Calculate Greeks for the valid subset ---
+        gamma_val = phi_d / (sigma_v * sqrt_T)
+        vega_val = (sqrt_T * phi_d) / 100.0  # Per 1% vol change
+        theta_val = (- (sigma_v * phi_d) / (2 * sqrt_T)) / 365.0 # Per day
+
+        # Vanna (dVega/dSpot) for Normal model
+        vanna_val = -d * phi_d / sigma_v
+        
+        # Charm (dDelta/dTime) for Normal model
+        if T_v > 1e-9:
+             charm_val = (-phi_d * d / (2 * T_v)) / 365.0 # Per day
+        else:
+            charm_val = np.zeros_like(d)
+
+        if opt_type.upper() == 'C':
+            delta_val = norm.cdf(d)
+        else: # Put
+            delta_val = norm.cdf(d) - 1
+            
+        # Place the calculated values back into the full-sized arrays
+        np.place(delta, valid_mask, delta_val)
+        np.place(gamma, valid_mask, gamma_val)
+        np.place(vega, valid_mask, vega_val)
+        np.place(theta, valid_mask, theta_val)
+        np.place(vanna, valid_mask, vanna_val)
+        np.place(charm, valid_mask, charm_val)
+
+    return {
+        'delta': delta,
+        'gamma': gamma,
+        'vega': vega,
+        'theta': theta,
+        'vanna': vanna,
+        'charm': charm
+    }

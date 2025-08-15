@@ -34,16 +34,28 @@ except ImportError:
 
 # plt.style.use('dark_background')
 st.set_page_config(layout="wide", page_title="SOFR Option Chain")
-st.title("SOFR Option Chain")
+#st.title("SOFR Option Chain")
+
+# --- ADD MODEL ENGINE TOGGLE IN SIDEBAR ---
+st.sidebar.markdown("### Model Engine")
+# Parse the selection to get a simple key like 'black76' or 'bachelier'
+model_engine_display = st.sidebar.radio(
+    "Select Pricing Model",
+    ('Black-76 (Lognormal)', 'Bachelier (Normal)'),
+    horizontal=True,
+    key='model_engine_selector'
+)
+model_engine = 'bachelier' if 'Bachelier' in model_engine_display else 'black76'
+st.sidebar.markdown("---")
 
 # This container will hold the forward prices display
 forward_price_container = st.container()
 
 # --- 0. Snapshot Runner ---
-st.sidebar.markdown("### Data Snapshots")
-if st.sidebar.button("Run New Snapshot", use_container_width=True):
+st.sidebar.markdown("### Snapshots")
+if st.sidebar.button("Pull New Snapshot", use_container_width=True):
     if BLOOMBERG_AVAILABLE:
-        with st.spinner("Running snapshot job... This may take several minutes."):
+        with st.spinner("Running snapshot job... "):
             try:
                 run_snapshot()
                 st.sidebar.success("Snapshot job complete!")
@@ -65,14 +77,14 @@ valid_default_exists = 'shared_folder' in st.session_state and st.session_state.
 if valid_default_exists:
     # If a valid default exists, pass it to the widget
     selected_folders = st.sidebar.multiselect(
-        "Folders to load:",
+        "Folders to load (date\time):",
         options=options_list,
         default=[st.session_state.shared_folder]
     )
 else:
     # If no valid default, call the widget WITHOUT the default argument
     selected_folders = st.sidebar.multiselect(
-        "Folders to load:",
+        "Folders to load (date\time):",
         options=options_list
     )
 
@@ -115,7 +127,7 @@ for folder in selected_folders:
     #    f"Files in {folder}/", options=files, default=[], key=folder
     #)
     chosen = st.sidebar.multiselect(
-        label=f"Files in {folder}/",
+        label=f"Expiries in {folder}/",
         options=files,
         default=[],
         key=folder,
@@ -162,7 +174,7 @@ with st.sidebar.form(key='manual_sabr_form', clear_on_submit=False):
         value=0.1, step=1e-4, format="%.5f"
     )
     recalibrate = st.form_submit_button("Recalibrate")
-manual_params = dict(alpha=alpha_in, beta=beta_in, rho=rho_in, nu=nu_in)
+manual_params = dict(alpha=alpha_in, beta=beta_in, rho=rho_in, nu=nu_in, recalibrate=recalibrate)
 st.session_state['manual_file'] = manual_file
 
 
@@ -286,8 +298,33 @@ show_manual_rnd = st.sidebar.checkbox("Show Manual RND", value=False, key="sideb
 #        st.session_state["refresh_rnd"] = not st.session_state.get("refresh_rnd", True)
 
 
+#results = {f: process_snapshot_file(f, manual_params, model_engine=model_engine) for f in files_to_show}
+#vvvvvvvvvvvvvvvvvvvvvvv
+# This new loop correctly unpacks the results and logs failures
+from collections import defaultdict
+results = {}
+skipped_files_log = defaultdict(list)
+
+for f in files_to_show:
+    # Unpack the two return values from the function
+    result_dict, reason = process_snapshot_file(f, manual_params, model_engine=model_engine)
     
-results = {f: process_snapshot_file(f, manual_params) for f in files_to_show}
+    if reason is None:
+        # On success, add the dictionary to the results
+        results[f] = result_dict
+    else:
+        # On failure, log the reason and the file path
+        path_parts = os.path.normpath(f).split(os.sep)
+        source_name = os.path.join(*path_parts[-3:])
+        skipped_files_log[reason].append(source_name)
+
+# --- (Optional but Recommended) Add an expander to show skipped files ---
+if skipped_files_log:
+    with st.expander("Skipped Files Log"):
+        for reason, files in skipped_files_log.items():
+            st.subheader(reason)
+            st.json(files)
+
 
 # --- Display Currently Loaded Chains and Forward Prices ---
 with forward_price_container:

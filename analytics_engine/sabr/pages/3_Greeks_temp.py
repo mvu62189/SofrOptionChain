@@ -11,8 +11,8 @@ import os
 # Import necessary functions from your existing modules
 from mdl_load import discover_snapshot_files
 from mdl_processing import process_snapshot_file
-from greeks import calculate_greeks
-from sabr_v2 import sabr_vol_lognormal
+from greeks import calculate_greeks, calculate_greeks_bachelier
+from sabr_v2 import sabr_vol_lognormal, sabr_vol_normal
 
 st.set_page_config(layout="wide", page_title="Greeks Exposure")
 st.title("Dealer Greeks Exposure Dashboard")
@@ -25,7 +25,7 @@ st.info(
 # --- Data Loading and Caching ---
 
 @st.cache_data(show_spinner="Loading all snapshots and calculating Greeks...")
-def load_and_process_all_snapshots(folder_paths):
+def load_and_process_all_snapshots(folder_paths, model_engine):
     """
     Loads all parquet files, CORRECTS THE STRIKE DATA, calculates Greeks,
     and returns a comprehensive DataFrame of exposures.
@@ -65,7 +65,7 @@ def load_and_process_all_snapshots(folder_paths):
         # --- END OF DEFINITIVE STRIKE FIX ---
 
         # Now that strikes are fixed, we can call process_snapshot_file just to get SABR params
-        res = process_snapshot_file(file_path, manual_params={})
+        res = process_snapshot_file(file_path, manual_params={}, model_engine=model_engine)
         if not res or not res.get('params_fast'):
             st.warning(f"Skipping file {os.path.basename(file_path)}: SABR calibration failed.")
             continue
@@ -76,16 +76,34 @@ def load_and_process_all_snapshots(folder_paths):
              pd.to_datetime(df['snapshot_ts'].iloc[0].split(" ")[0]).date()).days / 365.0
 
         # Use the SABR params to calculate a smooth vol for ALL strikes in our now-corrected dataframe
-        df['sabr_iv'] = sabr_vol_lognormal(F, df['strike'], T, **sabr_params)
+        #df['sabr_iv'] = sabr_vol_lognormal(F, df['strike'], T, **sabr_params)
+
+        # --- MODIFIED: Use the correct SABR model for the full IV curve ---
+        if model_engine == 'black76':
+            df['sabr_iv'] = sabr_vol_lognormal(F, df['strike'], T, **sabr_params)
+        else: # bachelier
+            df['sabr_iv'] = sabr_vol_normal(F, df['strike'], T, sabr_params['alpha'], sabr_params['rho'], sabr_params['nu'])
 
         # We can now proceed, using the corrected 'strike' and new 'sabr_iv'
         df_calls = df[df['type'].str.upper() == 'C'].copy()
         df_puts = df[df['type'].str.upper() == 'P'].copy()
 
-        greeks_c = calculate_greeks(F, df_calls['strike'], T, df_calls['sabr_iv'], 'C')
-        greeks_p = calculate_greeks(F, df_puts['strike'], T, df_puts['sabr_iv'], 'P')
+        #greeks_c = calculate_greeks(F, df_calls['strike'], T, df_calls['sabr_iv'], 'C')
+        #greeks_p = calculate_greeks(F, df_puts['strike'], T, df_puts['sabr_iv'], 'P')
         
-        for greek in greeks_c:
+        # --- MODIFIED: Use the correct Greeks function based on model selection ---
+        if model_engine == 'black76':
+            greeks_func = calculate_greeks
+        else: # bachelier
+            greeks_func = calculate_greeks_bachelier
+        
+        greeks_c = greeks_func(F, df_calls['strike'], T, df_calls['sabr_iv'], 'C')
+        greeks_p = greeks_func(F, df_puts['strike'], T, df_puts['sabr_iv'], 'P')
+        
+        # Ensure only common greeks are processed if Bachelier is selected
+        valid_greeks = list(greeks_c.keys())
+
+        for greek in valid_greeks:
             df_calls[greek] = greeks_c[greek]
             df_puts[greek] = greeks_p[greek]
         
@@ -111,6 +129,16 @@ def load_and_process_all_snapshots(folder_paths):
 # --- Sidebar Controls ---
 with st.sidebar:
     st.markdown("### Exposure Controls")
+
+    # --- ADDED: Model Engine Toggle ---
+    model_engine_display = st.radio(
+        "Select Pricing Model",
+        ('Black-76 (Lognormal)', 'Bachelier (Normal)'),
+        horizontal=True,
+        key='model_engine_selector'
+    )
+    model_engine = 'bachelier' if 'Bachelier' in model_engine_display else 'black76'
+    st.markdown("---")
     
     file_dict = discover_snapshot_files("snapshots")
     all_folders = list(file_dict.keys())
@@ -122,16 +150,23 @@ with st.sidebar:
     )
     
     st.markdown("---")
+
+    # --- MODIFIED: Adjust available Greeks for Bachelier ---
+    greek_options = ['delta', 'gamma', 'vega', 'theta', 'vanna', 'charm']
+    if model_engine == 'bachelier':
+        # Vanna and Charm were added to the bachelier greeks function
+        greek_options = ['delta', 'gamma', 'vega', 'theta', 'vanna', 'charm']
+
     greek_to_show = st.selectbox(
         "Select Greek to Display",
-        options=['delta', 'gamma', 'vega', 'theta', 'vanna', 'charm']
+        options=greek_options
     )
 
 # --- Main Panel ---
 if not selected_folders:
     st.warning("Please select one or more snapshot folders from the sidebar.")
 else:
-    full_df = load_and_process_all_snapshots(tuple(selected_folders))
+    full_df = load_and_process_all_snapshots(tuple(selected_folders), model_engine)
 
     if full_df.empty:
         st.error("No valid data could be processed from the selected folders.")
