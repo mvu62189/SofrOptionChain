@@ -306,52 +306,18 @@ with forward_price_container:
     
     st.markdown("---")
 
-# --- Display Forward Prices ---
-#st.sidebar.markdown("---")
-#st.sidebar.markdown("### Forward Prices")
-#for fname, res in results.items():
-#    if res and res.get('forward_price'):
-#        label = os.path.basename(fname)
-#        fwd_price = res['forward_price']
-#        st.sidebar.markdown(f"**{label}:** `{fwd_price:.4f}`")
 
-# BETA CALIBRATE BUTTON _ NEW BUTTON MADE
-#col1, col2 = st.columns([1,3])
-#with col1:
-#    if st.button("Historical β-Calibrate"):
-#        st.info("Optimizing β across selected snapshots…")
-#        β_opt = calibrate_global_beta(files_to_show)
-#        st.success(f"Global β optimized: {β_opt:.4f}")
-#        process_snapshot_file.clear()
-#        st.warning("Calibration cache cleared. Please refresh your browser (F5) to apply the new β.")
-#        st.stop()
-#with col2:
-#    st.metric("Current β", f"{load_global_beta():.4f}")
 
 # --- 6. Plot via plotting module ---
 if st.session_state.get("refresh_vol", True):
-    #show_mkt_iv    = st.checkbox("Show Market IV",    value=True, key="toggle_mkt_iv")
-    #show_model_iv  = st.checkbox("Show SABR Model IV", value=True, key="toggle_model_iv")
-    #show_manual_iv = st.checkbox("Show Manual IV",     value=True, key="toggle_manual_iv")
-
     fig = plot_vol_smile(results, vol_visible, show_mkt_iv, show_model_iv, show_manual_iv)
     st.pyplot(fig, clear_figure=True)
 
 
 if st.session_state.get("refresh_rnd", True):
-    #show_mkt_rnd    = st.checkbox("Show Market RND",    value=True,   key="toggle_mkt_rnd")
-    #show_model_rnd  = st.checkbox("Show SABR RND",      value=True,   key="toggle_model_rnd")
-    #show_manual_rnd = st.checkbox("Show Manual RND",    value=False,  key="toggle_manual_rnd")
-
     fig2 = plot_rnd(results, rnd_visible, show_mkt_rnd, show_model_rnd, show_manual_rnd)
     st.pyplot(fig2, clear_figure=True)
 
-## --- 7. Debug & parameter tables ---
-#with col_clear:
-#    if st.button("Clear Cache"):
-#       process_snapshot_file.clear()
-#        st.warning("Calibration cache cleared. Refresh (F5) to rerun calibration.")
-#        st.stop()
 
 with st.expander("Debug 2.0: Snapshot Data & Params"):
     for f, res in results.items():

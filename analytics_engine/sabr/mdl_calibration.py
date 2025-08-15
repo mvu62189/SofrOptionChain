@@ -7,7 +7,7 @@ from typing import Tuple, Dict
 from sabr_v2 import calibrate_sabr_full, calibrate_sabr_fast, sabr_vol_normal, sabr_vol_lognormal
 from sabr_v2 import b76_vega
 import json, os
-
+from bachelier import bachelier_vega
 from datetime import datetime
 from iv_utils import implied_vol
 
@@ -239,7 +239,7 @@ def fit_sabr_atm_alpha(strikes: np.ndarray, F: float, T: float,
     return params, iv_model
 
 def fit_sabr(strikes: np.ndarray, F: float, T: float,
-             vols: np.ndarray, method: str = 'fast', # method is no longer used but kept for interface consistency
+             vols: np.ndarray, model_engine: str = 'black76', # method is no longer used but kept for interface consistency
              manual_params: Dict[str, float] = None) -> Tuple[Dict[str, float], np.ndarray]:
     """
     Calibrate SABR using an interpolated, Vega-weighted objective function.

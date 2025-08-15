@@ -32,9 +32,7 @@ def calculate_greeks(F, K, T, sigma, opt_type='C'):
         # Select only the valid elements for the calculation
         F_v = F
         K_v = K[valid_mask]
-        
         sigma_v = sigma[valid_mask]
-
         T_v = T
 
         # Calculate d1 and d2 for the valid subset
@@ -45,20 +43,15 @@ def calculate_greeks(F, K, T, sigma, opt_type='C'):
         # Standard normal probability density function
         phi_d1 = norm.pdf(d1)
 
-        # --- Calculate Greeks for the valid subset ---
-        
+        # --- Calculate Greeks for the valid subset ---        
         # Vega (per 1% vol change, so we divide by 100)
         vega_val = (F_v * phi_d1 * sqrt_T) / 100.0
-
         # Gamma
         gamma_val = phi_d1 / (F_v * sigma_v * sqrt_T)
-
         # Theta (per day, so we divide by 365)
-        theta_val = (- (F_v * phi_d1 * sigma_v) / (2 * sqrt_T)) / 365.0
-        
+        theta_val = (- (F_v * phi_d1 * sigma_v) / (2 * sqrt_T)) / 365.0        
         # Vanna (dVega/dSpot)
         vanna_val = (vega_val / F_v) * (1 - d1 / (sigma_v * sqrt_T))
-
         # Charm calculation needs to handle T_v potentially being zero
         if T_v > 1e-9:
             charm_val = (phi_d1 * (d2 * sigma_v * sqrt_T)) / (2 * T_v * sigma_v * sqrt_T)
