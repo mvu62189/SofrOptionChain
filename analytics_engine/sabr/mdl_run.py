@@ -80,12 +80,6 @@ with s_col2:
     if st.sidebar.button("Refresh RND"):
         st.session_state["refresh_rnd"] = not st.session_state.get("refresh_rnd", True)
 
-# --- 1. File selection via modular loader ---
-file_dict = discover_snapshot_files("snapshots")
-
-# Clear Cache button ############# NEW BUTTON MADE
-# col_main, col_clear = st.columns([1, 9])
-
 
 all_files = []
 for folder in selected_folders:
