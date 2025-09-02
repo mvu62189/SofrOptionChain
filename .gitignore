@@ -23,16 +23,16 @@ venv/
 *.exe
 
 # Data, logs, and runtime output
-#*.csv
-#*.xlsx
-#*.log
-#*.db
+*.csv
+*.xlsx
+*.log
+*.db
 #*.parquet
-#*.pickle
-#logs/
+*.pickle
+logs/
 #snapshots/
-#.cache/
-#cache/
+.cache/
+cache/
 #__snapshot__/
 
 # VSCode and IDE metadata

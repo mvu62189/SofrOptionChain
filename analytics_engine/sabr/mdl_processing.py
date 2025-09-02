@@ -39,7 +39,7 @@ def process_snapshot_file(parquet_path, manual_params, df_input=None, model_engi
 
     if 'ticker' not in df.columns:
         st.error(f"Critical 'ticker' column missing in {source_name}. Cannot process.")
-        return None
+        return None, f"Critical 'ticker' column missing in {source_name}."
 
     # 1. Define a highly specific regex to capture the strike price.
     # It looks for a 'C' or 'P' followed by the number.
@@ -101,7 +101,7 @@ def process_snapshot_file(parquet_path, manual_params, df_input=None, model_engi
     df_otm = df_trim[((df_trim['type']=='C')&(df_trim['strike']>F))|((df_trim['type']=='P')&(df_trim['strike']<F))].reset_index(drop=True)
     df_otm = df_otm.sort_values(by='strike').reset_index(drop=True)
     
-    if df_otm.empty: return None
+    if df_otm.empty: return None, "No OTM options found after filtering"
     snap_dt = datetime.strptime(df_otm['snapshot_ts'].iloc[0], '%Y%m%d %H%M%S')
     expiry = pd.to_datetime(df_otm['expiry_date'].iloc[0]).date()
     T = (expiry - snap_dt.date()).days/365.0
@@ -146,7 +146,7 @@ def process_snapshot_file(parquet_path, manual_params, df_input=None, model_engi
         # If the rt_open_interest column doesn't exist, we can't perform this filter.
         # We'll issue a warning and proceed without this specific trimming step.
         #st.warning(f"'rt_open_interest' column not found in {source_name}. Skipping file.")
-        return None
+        return None, f"Column 'rt_open_interest' not found in source"
     # --- END OF FIX ---
 
     df_otm['spread'] = df_otm['ask'] - df_otm['bid']
