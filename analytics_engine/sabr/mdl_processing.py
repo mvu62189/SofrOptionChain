@@ -30,7 +30,7 @@ def process_snapshot_file(parquet_path, manual_params, df_input=None, model_engi
         df_raw = pd.read_parquet(parquet_path)
     else:
         st.error("process_snapshot_file requires either a parquet_path or a df_input.")
-        return None
+        return None, "process_snapshot_file requires either a parquet_path or a df_input."
     
     df = df_raw.copy()
 
