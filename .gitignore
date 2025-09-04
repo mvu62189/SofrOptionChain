@@ -25,14 +25,14 @@ venv/
 # Data, logs, and runtime output
 *.csv
 *.xlsx
-*.log
-*.db
+#*.log
+#*.db
 #*.parquet
 *.pickle
-logs/
+#logs/
 #snapshots/
-.cache/
-cache/
+#.cache/
+#cache/
 #__snapshot__/
 
 # VSCode and IDE metadata
