@@ -8,7 +8,7 @@ IV_ENGINES = {
     'black76':   black76_iv,
 }
 
-def implied_vol(F, T, K, price, opt_type, engine='black76'):
+def implied_vol(F, T, K, price, opt_type, engine='bachelier'):
     """
     Universal interface: converts puts→calls, enforces intrinsic floor,
     then calls the selected pricing‐model inversion engine.

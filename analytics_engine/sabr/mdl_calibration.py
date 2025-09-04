@@ -73,8 +73,8 @@ def load_and_prepare_for_beta(df: pd.DataFrame):
             F=float(r['future_px']), T=T,
             K=r['strike'], price=r['mid_price'],
             opt_type=r['type'], 
-            # engine='bachelier'
-            engine='black76'
+            engine='bachelier'
+            # engine='black76'
         ) if not np.isnan(r['mid_price']) else np.nan,
         axis=1
     )
@@ -239,7 +239,7 @@ def fit_sabr_atm_alpha(strikes: np.ndarray, F: float, T: float,
     return params, iv_model
 
 def fit_sabr(strikes: np.ndarray, F: float, T: float,
-             vols: np.ndarray, model_engine: str = 'black76', # method is no longer used but kept for interface consistency
+             vols: np.ndarray, model_engine: str = 'bachelier', # method is no longer used but kept for interface consistency
              manual_params: Dict[str, float] = None) -> Tuple[Dict[str, float], np.ndarray]:
     """
     Calibrate SABR using an interpolated, Vega-weighted objective function.

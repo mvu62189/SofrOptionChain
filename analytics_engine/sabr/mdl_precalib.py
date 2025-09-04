@@ -36,7 +36,7 @@ def prepare_calibration(path: str):
     df_otm['iv'] = df_otm.apply(
         lambda r: implied_vol(
             F=F, T=T, K=r['strike'], price=r['mid_price'],
-            opt_type=r['type'], engine='black76'
+            opt_type=r['type'], engine='bachelier'
         ) if not np.isnan(r['mid_price']) else np.nan,
         axis=1
     )

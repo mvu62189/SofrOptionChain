@@ -21,7 +21,7 @@ def price_from_sabr_old_non_vectorized(strikes, F, T, alpha, beta, rho, nu):
     return np.array(prices)
 
 # VECTORIZED 
-def price_from_sabr(strikes, F, T, alpha, beta, rho, nu, model_engine='black76'):
+def price_from_sabr(strikes, F, T, alpha, beta, rho, nu, model_engine='bachelier'):
     """
     Price European options using SABR-fitted vols under Black76/Bach model. Is model aware.
     This version is fully vectorized.

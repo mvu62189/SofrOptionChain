@@ -67,7 +67,7 @@ def load_and_prepare(path, logger=None, min_iv=1e-4, min_vega=1e-6):
         p = row.mid_price
         
         opt_type = row.type.upper()  # ensure 'C' or 'P'
-        iv = implied_vol(row.future_px, T, K, p, opt_type, engine="black76")
+        iv = implied_vol(row.future_px, T, K, p, opt_type, engine="bachelier")
         iv = max(iv, min_iv)
         # vega = bachelier_vega(row.future_px, K, T, iv)
         vega = b76_vega(row.future_px, K, T, iv)

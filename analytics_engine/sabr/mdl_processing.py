@@ -10,7 +10,7 @@ from mdl_calibration import fit_sabr_de, fit_sabr
 from mdl_rnd_utils import market_rnd, model_rnd
 
 @st.cache_data(show_spinner="Calibrating...", persist=True)
-def process_snapshot_file(parquet_path, manual_params, df_input=None, model_engine='black76'):
+def process_snapshot_file(parquet_path, manual_params, df_input=None, model_engine='bachelier'):
     # Logic to accept df and parquet as input
     source_name = ""
     if parquet_path:
