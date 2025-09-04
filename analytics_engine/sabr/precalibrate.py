@@ -74,6 +74,14 @@ def run_precalibration():
             if reason is None and res:
                 joblib.dump(res, cache_file_path)
 
+    # --- NEW: Column name mapping for standardization ---
+    COLUMN_MAPPING = {
+        'Option Type': 'option_type',
+        'Open Interest': 'open_interest',
+        'Volume': 'volume',
+        # Add other potential variations here if needed
+    }
+
     # Loop 2: Aggregate metrics for each snapshot folder (for Overview page)
     for folder, files in tqdm(file_dict.items(), desc="Aggregating Snapshot Metrics"):
         snapshot_metrics = {
@@ -87,13 +95,15 @@ def run_precalibration():
         for file_path in files:
             df = pd.read_parquet(file_path)
             
-            # --- MODIFIED FIX: Check for 'option_type' and skip file if it's missing ---
-            if 'option_type' not in df.columns:
-                print(f"\n[Warning] Skipping file: 'option_type' column not found in {file_path}. Cannot aggregate.")
-                continue
-            # --- END FIX ---
+            # --- FIX: Standardize column names ---
+            df.rename(columns=COLUMN_MAPPING, inplace=True)
             
-            res, _ = process_snapshot_file(file_path, manual_params={}, model_engine='black76') # Use black76 for metrics
+            # Now, the check for 'option_type' will work correctly
+            if 'option_type' not in df.columns:
+                print(f"\n[Warning] Skipping file: 'option_type' column not found in {file_path} after renaming. Cannot aggregate.")
+                continue
+            
+            res, _ = process_snapshot_file(file_path, manual_params={}, model_engine='black76', df_override=df)
 
             if res is None: continue
 
@@ -144,7 +154,6 @@ def run_precalibration():
         # Final Calculations
         call_vol = snapshot_metrics['call_volume']
         put_vol = snapshot_metrics['put_volume']
-        # Note: Changed to Put/Call ratio to be more standard
         snapshot_metrics['volume_pc_ratio'] = put_vol / call_vol if call_vol > 0 else 0
         
         call_oi = snapshot_metrics['call_oi']
