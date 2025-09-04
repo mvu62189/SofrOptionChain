@@ -7,6 +7,7 @@ import plotly.express as px
 # --- CONFIGURATION ---
 GREEKS_CACHE_DIR = 'analytics_results/greeks_exposure'
 CONTRACT_NOTIONAL = 1_000_000
+greeks_cols = ['gamma', 'vanna', 'delta', 'charm', 'theta', 'vega']
 
 st.set_page_config(layout="wide", page_title="Greeks Exposure")
 
@@ -83,8 +84,8 @@ col3.metric("Total Theta ($)", f"${df['theta_exp'].sum():,.0f}",
 # --- Create Tabs for Different Views ---
 tab_names = ["Forward Curve", "Exposure by Strike", "Exposure by Expiry", 
              "Time Series Analysis", "Expiry Drill-Down", "Strike Drill-Down"]
-if skipped_files:
-    tab_names.append("Skipped Files Log")
+#if skipped_files:
+#    tab_names.append("Skipped Files Log")
 tabs = st.tabs(tab_names)
 
 with tabs[0]: # Forward Curve
@@ -203,25 +204,17 @@ with tabs[2]: # Exposure by Expiry
 
 with tabs[3]: # Time Series Analysis
     st.subheader("Time Series of Total Net Exposures")
-    # --- Calculate time series for all greeks ---
-    ts_data = []
-    for ts, data in all_data.items():
-        ts_point = {'timestamp': pd.to_datetime(ts, format='%Y%m%d %H%M%S')}
-        oi       = pd.to_numeric(data['rt_open_interest'], errors='coerce').fillna(0)
-        
-        for col in greeks_cols:
-             if col not in data.columns: data[col] = 0.0
 
-        ts_point['gamma_exp'] = (data['gamma'] * oi * -1 * (CONTRACT_NOTIONAL * 0.01) * 0.01).sum()
-        ts_point['vanna_exp'] = (data['vanna'] * oi * -1 * CONTRACT_NOTIONAL * 0.01).sum()
-        ts_point['charm_exp'] = (data['charm'] * oi * -1 * CONTRACT_NOTIONAL).sum()
-        ts_point['theta_exp'] = (data['theta'] * oi * -1 * CONTRACT_NOTIONAL).sum()
-        ts_point['delta_exp'] = (data['delta'] * oi * -1 * CONTRACT_NOTIONAL).sum()
-        ts_point['vega_exp']  = (data['vega']  * oi * -1 * CONTRACT_NOTIONAL).sum()
-        ts_data.append(ts_point)
-    
-    if ts_data:
-        df_ts = pd.DataFrame(ts_data).sort_values('timestamp')
+    # --- New, Efficient Time Series Calculation ---
+    # Group the entire dataset by the timestamp column and sum the pre-calculated exposure columns.
+    df_ts = all_data.groupby('snapshot_ts')[
+        ['gamma_exp', 'vanna_exp', 'charm_exp', 'theta_exp', 'delta_exp', 'vega_exp']
+    ].sum().reset_index().rename(columns={'snapshot_ts': 'timestamp'})
+
+    if not df_ts.empty:
+        df_ts = df_ts.sort_values('timestamp')
+        # Define greeks_cols here if it's not defined globally
+        greeks_cols = ['gamma', 'vanna', 'delta', 'charm', 'theta', 'vega']
         for greek in greeks_cols:
             exp_col = f'{greek}_exp'
             st.plotly_chart(px.line(df_ts, title=f"Total Net {greek.capitalize()} Exposure ($) Over Time",
@@ -266,12 +259,12 @@ with tabs[5]:
     st.plotly_chart(fig, use_container_width=True)
 
 # --- Skipped files log showed in the last tab ---
-if skipped_files:
-    with tabs[6]:
-        st.header("Log of Skipped or Failed Snapshots")
-        for reason, files in sorted(skipped_files.items()):
-            with st.expander(f"{reason} ({len(files)} files)"):
-                st.json(files)
+#if skipped_files:
+#    with tabs[6]:
+#        st.header("Log of Skipped or Failed Snapshots")
+#        for reason, files in sorted(skipped_files.items()):
+#            with st.expander(f"{reason} ({len(files)} files)"):
+#                st.json(files)
 
 # ... and so on for the rest of your metrics and tabs ...
 # The plotting functions like `create_exposure_plot` can be kept as they are.
