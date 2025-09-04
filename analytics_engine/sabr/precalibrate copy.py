@@ -63,23 +63,27 @@ def run_precalibration():
     # Loop 1: Calibrate individual files (for Surfaces page)
     all_files = [file for files in file_dict.values() for file in files]
     for file_path_str in tqdm(all_files, desc="Calibrating Individual Chains"):
-        file_path = Path(file_path_str)
-        relative_path = file_path.relative_to(SNAPSHOTS_DIR)
-        cache_subdir = Path(CACHE_DIR) / relative_path.parent
-        os.makedirs(cache_subdir, exist_ok=True)
-        
-        for engine in MODEL_ENGINES:
-            cache_file_path = cache_subdir / f"{file_path.stem}_{engine}.joblib"
-            res, reason = process_snapshot_file(str(file_path), manual_params={}, model_engine=engine)
-            if reason is None and res:
-                joblib.dump(res, cache_file_path)
+        try:
+            file_path = Path(file_path_str)
+            relative_path = file_path.relative_to(SNAPSHOTS_DIR)
+            cache_subdir = Path(CACHE_DIR) / relative_path.parent
+            os.makedirs(cache_subdir, exist_ok=True)
+            
+            for engine in MODEL_ENGINES:
+                cache_file_path = cache_subdir / f"{file_path.stem}_{engine}.joblib"
+                res, reason = process_snapshot_file(str(file_path), manual_params={}, model_engine=engine)
+                if reason is None and res:
+                    joblib.dump(res, cache_file_path)
+        except Exception as e:
+            # Enhanced logging for Loop 1
+            tqdm.write(f"\n[Error] Failed during individual calibration for {file_path_str}. Skipping. Reason: {e}")
+            continue
 
-    # --- NEW: Column name mapping for standardization ---
+    # --- Column name mapping for standardization ---
     COLUMN_MAPPING = {
-        'type': 'option_type',
-        'rt_open_interest': 'open_interest',
+        'Option Type': 'option_type',
+        'Open Interest': 'open_interest',
         'Volume': 'volume',
-        # Add other potential variations here if needed
     }
 
     # Loop 2: Aggregate metrics for each snapshot folder (for Overview page)
@@ -88,54 +92,52 @@ def run_precalibration():
             'total_volume': 0, 'total_oi': 0,
             'call_volume': 0, 'put_volume': 0,
             'call_oi': 0, 'put_oi': 0,
-            'term_structure': [], # List of {'T', 'atm_iv'}
-            'risk_reversals': [] # List of {'T', 'rr_25d'}
+            'term_structure': [], 
+            'risk_reversals': [] 
         }
         
         for file_path in files:
-            df = pd.read_parquet(file_path)
-            
-            # --- FIX: Standardize column names ---
-            df.rename(columns=COLUMN_MAPPING, inplace=True)
-            
-            # Now, the check for 'option_type' will work correctly
-            if 'option_type' not in df.columns:
-                print(f"\n[Warning] Skipping file: 'option_type' column not found in {file_path} after renaming. Cannot aggregate.")
-                continue
-            
-            res, _ = process_snapshot_file(file_path, manual_params={}, model_engine='black76', df_override=df)
-
-            if res is None: continue
-
-            # Aggregate totals
-            if 'volume' in df.columns:
-                snapshot_metrics['total_volume'] += df['volume'].sum()
-            if 'open_interest' in df.columns:
-                snapshot_metrics['total_oi'] += df['open_interest'].sum()
-
-            # Aggregate call/put specific metrics
-            calls_df = df[df['option_type'] == 'C']
-            puts_df = df[df['option_type'] == 'P']
-
-            if 'volume' in df.columns:
-                snapshot_metrics['call_volume'] += calls_df['volume'].sum()
-                snapshot_metrics['put_volume'] += puts_df['volume'].sum()
-            
-            if 'open_interest' in df.columns:
-                snapshot_metrics['call_oi'] += calls_df['open_interest'].sum()
-                snapshot_metrics['put_oi'] += puts_df['open_interest'].sum()
-
-            # Term Structure & Skew Metrics
-            F = res['forward_price']
-            T = res['T']
-            atm_strike_idx = np.abs(res['strikes'] - F).argmin()
-            atm_iv = res['market_iv'][atm_strike_idx]
-            
-            if not np.isnan(atm_iv):
-                snapshot_metrics['term_structure'].append({'T': T, 'atm_iv': atm_iv})
-
-            # Calculate Risk Reversal
             try:
+                df = pd.read_parquet(file_path)
+                
+                df.rename(columns=COLUMN_MAPPING, inplace=True)
+                
+                if 'option_type' not in df.columns:
+                    tqdm.write(f"\n[Warning] Skipping file: 'option_type' column not found in {file_path} after renaming.")
+                    continue
+                
+                res, _ = process_snapshot_file(file_path, manual_params={}, model_engine='black76', df_override=df)
+
+                if res is None: continue
+
+                # Aggregate totals
+                if 'volume' in df.columns:
+                    snapshot_metrics['total_volume'] += df['volume'].sum()
+                if 'open_interest' in df.columns:
+                    snapshot_metrics['total_oi'] += df['open_interest'].sum()
+
+                # Aggregate call/put specific metrics
+                calls_df = df[df['option_type'] == 'C']
+                puts_df = df[df['option_type'] == 'P']
+
+                if 'volume' in df.columns:
+                    snapshot_metrics['call_volume'] += calls_df['volume'].sum()
+                    snapshot_metrics['put_volume'] += puts_df['volume'].sum()
+                
+                if 'open_interest' in df.columns:
+                    snapshot_metrics['call_oi'] += calls_df['open_interest'].sum()
+                    snapshot_metrics['put_oi'] += puts_df['open_interest'].sum()
+
+                # Term Structure & Skew Metrics
+                F = res['forward_price']
+                T = res['T']
+                atm_strike_idx = np.abs(res['strikes'] - F).argmin()
+                atm_iv = res['market_iv'][atm_strike_idx]
+                
+                if not np.isnan(atm_iv):
+                    snapshot_metrics['term_structure'].append({'T': T, 'atm_iv': atm_iv})
+
+                # Calculate Risk Reversal
                 deltas = [black76_delta(F, k, T, 0, iv, 'call') for k, iv in zip(res['strikes'], res['market_iv'])]
                 valid_deltas = [(d, iv) for d, iv in zip(deltas, res['market_iv']) if not np.isnan(d) and not np.isnan(iv)]
                 if len(valid_deltas) > 2:
@@ -143,13 +145,21 @@ def run_precalibration():
                     interp_func = interp1d(delta_vals, iv_vals, bounds_error=False, fill_value=np.nan)
                     
                     iv_25d_call = interp_func(0.25)
-                    iv_25d_put = interp_func(1 - 0.25)
+                    iv_25d_put = interp_func(1 - 0.25) # This is for a 25-delta put (75-delta call)
                     
                     if not np.isnan(iv_25d_call) and not np.isnan(iv_25d_put):
                         rr_25d = iv_25d_call - iv_25d_put
                         snapshot_metrics['risk_reversals'].append({'T': T, 'rr_25d': rr_25d})
-            except Exception:
-                continue # Skip if interpolation fails
+            except Exception as e:
+                # --- ENHANCED LOGGING ---
+                tqdm.write(f"\n[Error] Failed to process file {file_path} during aggregation. Skipping. Reason: {e}")
+                # Also print the columns to help debug schema issues
+                try:
+                    df = pd.read_parquet(file_path)
+                    tqdm.write(f"--> Columns found: {list(df.columns)}")
+                except Exception as read_e:
+                    tqdm.write(f"--> Could not read columns from file. Read error: {read_e}")
+                continue
 
         # Final Calculations
         call_vol = snapshot_metrics['call_volume']
