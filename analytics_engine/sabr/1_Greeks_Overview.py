@@ -7,12 +7,6 @@ import plotly.express as px
 # --- CONFIGURATION ---
 GREEKS_CACHE_DIR = 'analytics_results/greeks_exposure'
 CONTRACT_NOTIONAL = 1_000_000
-
-# The value of this futures contract is defined as 
-# $25 per basis point (0.01%) change in the underlying rate. 
-
-# This means a 1% (100 basis points) move in the rate corresponds 
-# to a $2500 change in the contract's value
 greeks_cols = ['gamma', 'vanna', 'delta', 'charm', 'theta', 'vega']
 
 st.set_page_config(layout="wide", page_title="Greeks Exposure")
@@ -102,51 +96,37 @@ with tabs[0]: # Forward Curve
                             use_container_width=True)
 
 # --- REQ 1 & 2: Define a reusable function for the new plot style ---
-# --- REPLACEMENT for create_exposure_plot function ---
 def create_exposure_plot(data, group_by_col, greek, show_net):
-    """
-    Generates an exposure plot for a given greek, correctly handling signs
-    for a user's (long) perspective.
-    """
     exp_col = f'{greek}_exp'
+    
+    # Define plotting exposure based on Greek conventions for visual separation
+    if greek in ['gamma', 'vanna']:
+        data['plot_exp'] = np.where(data['type'].str.upper() == 'C', -data[exp_col].abs(), data[exp_col].abs())
+    elif greek in ['delta']:
+        # Short Call (positive delta) -> negative exposure. Short Put (negative delta) -> positive exposure
+        data['plot_exp'] = data[exp_col] * -1
+    else: # Theta, Vega, Charm
+        data['plot_exp'] = data[exp_col]
 
     if show_net:
-        # For the Net view, we sum the true, unmodified exposure values.
-        exposure_data = data.groupby(group_by_col)[exp_col].sum().reset_index()
-        exposure_data['color'] = np.where(exposure_data[exp_col] >= 0, 'Positive', 'Negative')
+        exposure_data        = data.groupby(group_by_col)['plot_exp'].sum().reset_index()
+        exposure_data['+/-'] = np.where(exposure_data['plot_exp'] >= 0, 'pos', 'neg')
+        fig = px.bar(exposure_data, title=f"Net {greek.capitalize()} Exposure",
+                     x=group_by_col, y='plot_exp', 
+                     color='+/-', color_discrete_map={'neg':'green', 'pos':'red'})
         
-        fig = px.bar(exposure_data,
-                     x=group_by_col,
-                     y=exp_col,
-                     color='color',
-                     title=f"Net {greek.capitalize()} Exposure by {group_by_col.replace('_', ' ').capitalize()}",
-                     color_discrete_map={'Positive':'green', 'Negative':'red'})
-        fig.update_layout(showlegend=False)
     else:
-        # For the Gross view (by option type), we show calls and puts separately.
-        # Gamma is always positive for long positions.
-        if greek == 'gamma':
-            data['plot_exp'] = data[exp_col].abs()
-        else:
-            # All other greeks are plotted with their true signs.
-            data['plot_exp'] = data[exp_col]
-
         exposure_data = data.groupby([group_by_col, 'type'])['plot_exp'].sum().reset_index()
-
-        fig = px.bar(exposure_data,
-                     x=group_by_col,
-                     y='plot_exp',
-                     color='type',
-                     title=f"{greek.capitalize()} Exposure by Option Type",
-                     barmode='relative'
+        fig = px.bar(exposure_data, title=f"{greek.capitalize()} Exposure by Option Type",
+                     x=group_by_col, y='plot_exp', color='type'
                      )
-        # Customizing colors for clarity
-        fig.for_each_trace(lambda t: t.update(marker_color='red') if t.name == 'C' else t.update(marker_color='green'))
-
-    # Common layout updates
-    fig.update_yaxes(title_text=f"{greek.capitalize()} Exposure ($)")
+        fig.for_each_trace(lambda t: t.update(marker_color='green') 
+                            if t.name.upper() == 'P' 
+                            else t.update(marker_color='red')
+                            )
+        
     if group_by_col == 'expiry_date':
-        fig.update_xaxes(type='category', tickangle=45) # Angle ticks for readability
+        fig.update_xaxes(type='category')    
     return fig
 
 # --- EXPOSURE PLOT TO CORRECTLY DISPLAY VEGA, THETA, CHARM ---                 ### REVISIT ### ## LOGIC ## ## ERROR ##
