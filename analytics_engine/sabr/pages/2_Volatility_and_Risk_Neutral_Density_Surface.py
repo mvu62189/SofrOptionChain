@@ -7,6 +7,7 @@ import plotly.graph_objects as go
 from scipy.interpolate import griddata, interp1d
 import os
 import joblib # Import joblib for loading cached files
+from scipy.integrate import trapezoid
 
 # Import necessary functions from existing modules
 from mdl_load       import discover_snapshot_files
@@ -47,7 +48,7 @@ def load_precalibrated_file(file_path, model_engine):
 # --- REFACTORED DATA PREPARATION ---
 # This function is now much faster as it just loads and aggregates cached data.
 @st.cache_data(show_spinner="Loading and aggregating pre-calibrated data...")
-def prepare_surface_data(file_paths, plot_type, model_engine):
+def preparesurface_data(file_paths, plot_type, model_engine):
     """
     Takes a list of file paths, loads their pre-calibrated results, and aggregates
     the data needed for plotting.
@@ -74,7 +75,7 @@ def prepare_surface_data(file_paths, plot_type, model_engine):
             
             # Check for calibrated parameters in the loaded result
             if res.get('params_fast'):
-                model_params_by_T.append({'T': T, 'F': res['forward_price'], **res['params_fast']})
+                model_params_by_T.append({'T': T, 'expiry_date': expiry_dt.date(), 'F': res['forward_price'], **res['params_fast']})
     
     if not market_points:
         return None
@@ -85,7 +86,58 @@ def prepare_surface_data(file_paths, plot_type, model_engine):
         "all_strikes":      all_strikes
     }
 
+# --- NEW FUNCTION to calculate the probability matrix ---
+@st.cache_data(show_spinner="Calculating probability matrix...")
+def calculate_probability_matrix(surface_data, model_engine):
+    """
+    Calculates the probability of the underlying finishing in 0.25 point bins
+    by integrating the model-derived RND for each expiry.
+    """
+    if not surface_data or not surface_data.get("model_params_by_T"):
+        return pd.DataFrame()
 
+    # Prepare data and define strike bins
+    model_params = pd.DataFrame(surface_data['model_params_by_T']).sort_values('T').drop_duplicates('T')
+    min_K = np.floor(min(surface_data['all_strikes']))
+    max_K = np.ceil(max(surface_data['all_strikes']))
+    bins = np.arange(min_K, max_K + 0.25, 0.25)
+    
+    matrix_data = []
+
+    # Process each expiry
+    for _, row in model_params.iterrows():
+        T = row['T']
+        F = row['F']
+        params = {'alpha': row['alpha'], 'beta': row['beta'], 'rho': row['rho'], 'nu': row['nu']}
+        
+        # 1. Create a high-resolution strike range for the RND curve
+        fine_strikes = np.linspace(min_K, max_K, 2500)
+        
+        # 2. Calculate the RND from the SABR model
+        rnd_values = model_rnd(fine_strikes, F, T, params, model_engine=model_engine)
+        rnd_values = np.maximum(rnd_values, 0) # Ensure no negative probabilities
+
+        # 3. Integrate the RND curve over each 0.25 point bin
+        probabilities = {}
+        for i in range(len(bins) - 1):
+            k_low, k_high = bins[i], bins[i+1]
+            mask = (fine_strikes >= k_low) & (fine_strikes <= k_high)
+            # Use the trapezoidal rule to find the area (probability) under the curve
+            bin_prob = trapezoid(rnd_values[mask], fine_strikes[mask])
+
+            column_name = f"{k_low:.2f}-{k_high:.2f}"
+            probabilities[column_name] = bin_prob
+
+        row_data = {'expiry': row['expiry_date'], **probabilities}
+        matrix_data.append(row_data)
+
+    if not matrix_data:
+        return pd.DataFrame()
+
+    # Format the final DataFrame
+    df = pd.DataFrame(matrix_data).set_index('expiry').sort_index()
+    df.index = pd.to_datetime(df.index).strftime('%-m/%d/%Y')
+    return df
 
 # --- Sidebar (No changes needed here, but included for completeness) ---
 with st.sidebar:
@@ -164,7 +216,7 @@ if 'camera' not in st.session_state:
 
 # --- MAIN PANEL FOR PLOTS (No changes needed below this line) ---
 if files_to_plot:
-    surface_data = prepare_surface_data(tuple(files_to_plot), plot_type, model_engine)
+    surface_data = preparesurface_data(tuple(files_to_plot), plot_type, model_engine)
 
     if not surface_data:
         st.error("No valid data points could be extracted from the selected files.")
@@ -245,6 +297,66 @@ if files_to_plot:
             fig.update_layout(scene_camera=st.session_state.camera)
 
         st.plotly_chart(fig, use_container_width=True, key="surface_plot")
+
+        # --- NEW SECTION FOR PROBABILITY MATRIX ---
+        st.subheader("Probability of Underlying Price at Expiry")
+        st.markdown(
+            "The table below shows the risk-neutral probability of the underlying price finishing "
+            "within a 0.25 point range at each expiry. Probabilities are derived by integrating the "
+            "SABR model's Risk-Neutral Density (RND) function for the selected snapshot."
+        )
+        
+        # Check if we have model parameters to work with
+        if len(surface_data.get("model_params_by_T", [])) >= 2:
+            prob_matrix = calculate_probability_matrix(surface_data, model_engine)
+            if not prob_matrix.empty:
+                threshold = 0.01  # 0.05% threshold to consider a probability meaningful
+        
+                # Find columns that have at least one value above the threshold
+                non_zero_cols = (prob_matrix > threshold).any(axis=0)
+                
+                if non_zero_cols.any():
+                    # Get the names of the first and last valid columns
+                    first_col_name = non_zero_cols.idxmax()
+                    last_col_name = non_zero_cols[::-1].idxmax()
+                    
+                    # Slice the DataFrame to the relevant range
+                    trimmed_prob_matrix = prob_matrix.loc[:, first_col_name:last_col_name]
+                else:
+                    trimmed_prob_matrix = prob_matrix # Show original if all are zero
+
+                # Level 1: Price Range (already created)
+                price_ranges = trimmed_prob_matrix.columns.tolist()
+                
+                # Level 2: Rate Range (100 - Price)
+                rate_ranges = []
+                for price_range in price_ranges:
+                    low, high = map(float, price_range.split('-'))
+                    rate_high = 100 - high
+                    rate_low = 100 - low
+                    rate_ranges.append(f"{rate_low:.2f}%-{rate_high:.2f}%")
+                
+                # Create and apply the MultiIndex
+                trimmed_prob_matrix.columns = pd.MultiIndex.from_arrays(
+                    [price_ranges, rate_ranges],
+                    names=["Underlying Price", "Implied Rate"]
+                )
+
+                # --- MODIFICATION: Update styling for dark theme ---
+                st.dataframe(
+                    trimmed_prob_matrix.style.format("{:.1%}")
+                        .set_properties(**{
+                            'background-color': '#0E1117', # Match Streamlit dark theme
+                            'width': '60px',
+                            'text-align': 'center'
+                        })
+                        .text_gradient(cmap='Greens_r', axis=1, low=0.0, high=1), 
+                    use_container_width=True
+                )
+            else:
+                st.warning("Could not generate probability matrix from the available data.")
+        else:
+            st.info("Requires at least two calibrated option chains to generate the probability matrix.")
 
 else:
     st.info("Please select a snapshot and one or more chains to begin.")

@@ -98,12 +98,12 @@ def build_cache_from_raw_snapshots(model_engine='black76'):
     final_df['rt_open_interest'] = pd.to_numeric(final_df['rt_open_interest'], errors='coerce').fillna(0)
     
     # --- Exposure Calculations ---
-    final_df['delta_exp'] = final_df['delta'] * final_df['rt_open_interest'] * -1 * CONTRACT_NOTIONAL
-    final_df['gamma_exp'] = final_df['gamma'] * final_df['rt_open_interest'] * -1 * (CONTRACT_NOTIONAL * 0.01) * 0.01
-    final_df['vega_exp']  = final_df['vega']  * final_df['rt_open_interest'] * -1 * CONTRACT_NOTIONAL
-    final_df['vanna_exp'] = final_df['vanna'] * final_df['rt_open_interest'] * -1 * CONTRACT_NOTIONAL * 0.01
-    final_df['charm_exp'] = final_df['charm'] * final_df['rt_open_interest'] * -1 * CONTRACT_NOTIONAL
-    final_df['theta_exp'] = final_df['theta'] * final_df['rt_open_interest'] * -1 * CONTRACT_NOTIONAL
+    final_df['delta_exp'] = final_df['delta'] * final_df['rt_open_interest'] * CONTRACT_NOTIONAL
+    final_df['gamma_exp'] = final_df['gamma'] * final_df['rt_open_interest'] * (CONTRACT_NOTIONAL * 0.01) * 0.01
+    final_df['vega_exp']  = final_df['vega']  * final_df['rt_open_interest'] * CONTRACT_NOTIONAL
+    final_df['vanna_exp'] = final_df['vanna'] * final_df['rt_open_interest'] * CONTRACT_NOTIONAL * 0.01
+    final_df['charm_exp'] = final_df['charm'] * final_df['rt_open_interest'] * CONTRACT_NOTIONAL
+    final_df['theta_exp'] = final_df['theta'] * final_df['rt_open_interest'] * CONTRACT_NOTIONAL
     
     # --- Add Partitioning Columns ---
     final_df['snapshot_date'] = pd.to_datetime(final_df['snapshot_ts'].str.split(" ").str[0], format='%Y%m%d').dt.date

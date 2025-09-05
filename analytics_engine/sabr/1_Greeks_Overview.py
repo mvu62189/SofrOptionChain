@@ -56,30 +56,57 @@ df = all_data[all_data['snapshot_ts'] == selected_ts].copy()
 
 
 
-# --- Market State Block ---
-#st.header(f"Selected Time Stamp: {selected_ts}")
-#st.markdown("---")
+# --- Market State Block (Corrected) ---
+st.header(f"Dealer Exposure for Snapshot: {pd.to_datetime(selected_ts).strftime('%Y-%m-%d %H:%M:%S')}")
+
+# --- Apply the dealer's short-option perspective for summary metrics ---
+# Dealers are short options, so we multiply by -1 to see their exposure.
+# e.g., Shorting an option with positive gamma results in negative gamma exposure for the dealer.
+total_gex = df['gamma_exp'].sum() * -1
+total_vex = df['vanna_exp'].sum() * -1
+total_delta_exp = df['delta_exp'].sum() * -1
+total_charm_exp = df['charm_exp'].sum() * -1
+# Dealers are LONG theta (profit from decay), and theta is naturally negative, so -1 makes it positive.
+total_theta_exp = df['theta_exp'].sum() * -1
+
 col1, col2, col3 = st.columns(3)
-col1.metric("Total GEX ($)", f"${df['gamma_exp'].sum():,.0f}",
-            help="**Formula:** `Gamma * OI * -1 * (Notional * 0.01)^2` | Gamma Exposure per 1% move in the underlying, squared.")
-col2.metric("Total VEX ($)", f"${df['vanna_exp'].sum():,.0f}",
-            help="**Formula:** `Vanna * OI * -1 * Notional * 0.01` | Change in total Delta for a 1% change in implied volatility.")
-gamma_flip_point = df.groupby('strike')['gamma_exp'].sum().cumsum()
+
+# GEX (Gamma Exposure): Note the corrected scaling and dealer perspective.
+# The value represents the change in the total delta exposure for a 1% move in the underlying.
+col1.metric("Total GEX ($ per 1% move)", f"${total_gex:,.0f}",
+            help="**Formula:** `sum(Gamma * OI * Notional * 0.01) * -1`. Represents the change in dealer Delta exposure for a +1% move in the underlying. A negative value means dealers must sell into a rally and buy into a drop, increasing volatility.")
+
+# VEX (Vanna Exposure)
+col2.metric("Total VEX ($)", f"${total_vex:,.0f}",
+            help="**Formula:** `sum(Vanna * OI * Notional * 0.01) * -1`. Change in total dealer Delta for a +1% change in implied volatility.")
+
+# --- CORRECTED GAMMA FLIP POINT LOGIC ---
 try:
-    flip_strike = gamma_flip_point[gamma_flip_point > 0].index[0]
+    # 1. Calculate the dealer's gamma exposure per strike (raw gamma * -1).
+    dealer_gamma_by_strike = df.groupby('strike')['gamma_exp'].sum() * -1
+    # 2. Calculate the cumulative sum of dealer gamma, sorted by strike.
+    cumulative_dealer_gamma = dealer_gamma_by_strike.sort_index().cumsum()
+    # 3. Find the first strike where the cumulative dealer gamma becomes positive.
+    flip_strike = cumulative_dealer_gamma[cumulative_dealer_gamma > 0].index[0]
     col3.metric("Gamma Flip Point", f"{flip_strike:.2f}",
-                help="The strike level where dealer Gamma exposure flips from negative to positive.")
+                help="The strike level where the dealer's aggregate Gamma exposure flips from negative to positive.")
 except IndexError:
+    # This exception occurs if the cumulative gamma never becomes positive.
     col3.metric("Gamma Flip Point", "N/A", help="Dealer Gamma exposure does not flip to positive in the observed range.")
 
 col1, col2, col3 = st.columns(3)
-col1.metric("Total Delta Exp ($)", f"${df['delta_exp'].sum():,.0f}",
-            help="**Formula:** `Delta * OI * -1 * Notional` | Total dollar value change of dealer positions for a +1 point move in the underlying.")
-col2.metric("Total Charm ($)", f"${df['charm_exp'].sum():,.0f}",
-            help="**Formula:** `Charm * OI * -1 * Notional` | Change in total Delta per day (Delta decay).")
-col3.metric("Total Theta ($)", f"${df['theta_exp'].sum():,.0f}",
-            help="**Formula:** `Theta * OI * -1 * Notional` | PnL decay per day from being short options.")
-#st.markdown("---")
+
+# Total Delta Exposure
+col1.metric("Total Delta Exposure ($)", f"${total_delta_exp:,.0f}",
+            help="**Formula:** `sum(Delta * OI * Notional) * -1`. The PnL impact on the dealer's position for a +1 point move in the underlying. A negative value means dealers are net short delta.")
+
+# Total Charm Exposure
+col2.metric("Total Charm ($ per day)", f"${total_charm_exp:,.0f}",
+            help="**Formula:** `sum(Charm * OI * Notional) * -1`. The daily change in the dealer's total Delta exposure (Delta decay).")
+
+# Total Theta Exposure
+col3.metric("Total Theta ($ per day)", f"${total_theta_exp:,.0f}",
+            help="**Formula:** `sum(Theta * OI * Notional) * -1`. The daily PnL decay dealers are expected to earn from being short options. Should be positive.")
 
 # --- Create Tabs for Different Views ---
 tab_names = ["Forward Curve", "Exposure by Strike", "Exposure by Expiry", 
@@ -95,8 +122,79 @@ with tabs[0]: # Forward Curve
                             x='expiry_date', y='forward_price', markers=True), 
                             use_container_width=True)
 
+def create_exposure_plot(data, group_by_col, greek, show_net): # Renamed to match your code
+    """
+    Generates exposure plots with correct logic for dealer (net short) perspective.
+    - Gamma, Vega are always negative risks for dealers.
+    - Theta is always a positive PnL for dealers.
+    - Delta, Vanna, Charm are directional.
+    """
+    exp_col = f'{greek}_exp'
+    df_viz = data.copy()
+
+    # --- Apply Dealer Perspective (-1) to all exposures for visualization ---
+    # This ensures we are always plotting from the market-maker's viewpoint.
+    df_viz[exp_col] = df_viz[exp_col] * -1
+
+    if show_net:
+        # --- NET VIEW ---
+        exposure_data = df_viz.groupby(group_by_col)[exp_col].sum().reset_index()
+        exposure_data['color'] = np.where(exposure_data[exp_col] >= 0, '#2ca02c', '#d62728') # Green for positive, Red for negative
+        
+        fig = px.bar(exposure_data, x=group_by_col, y=exp_col,
+                     title=f"Net Dealer {greek.capitalize()} Exposure",
+                     color='color', 
+                     color_discrete_map={'#2ca02c':'#2ca02c', '#d62728':'#d62728'}) # Pass through colors
+        fig.update_layout(showlegend=False)
+
+    else:
+        # --- CALL vs PUT VIEW ---
+        # Create a 'plot_exp' column for visualization purposes only.
+        if greek in ['gamma', 'vega']:
+            # For dealers, Gamma and Vega are always negative exposures.
+            # We take the absolute value and make it negative to stack them visually on one side.
+            df_viz['plot_exp'] = df_viz[exp_col].abs()
+        elif greek == 'theta':
+            # For dealers, Theta is always a positive PnL (they collect decay).
+            # We plot the true (positive) exposure.
+            df_viz['plot_exp'] = df_viz[exp_col]
+        else: # Delta, Vanna, Charm are directional
+            # Short Calls -> Neg Delta/Vanna. Short Puts -> Pos Delta/Vanna.
+            # We plot their true directional exposure.
+            df_viz['plot_exp'] = df_viz[exp_col]
+        
+        # --- FIX: Aggregate both plot_exp and the original exp_col ---
+        # This ensures the column for hover_data is available in the final DataFrame.
+        exposure_data = df_viz.groupby([group_by_col, 'type']).agg({
+            'plot_exp': 'sum',
+            exp_col: 'sum'  # This preserves the original exposure column
+        }).reset_index()
+        
+        fig = px.bar(exposure_data, x=group_by_col, y='plot_exp', color='type',
+                     title=f"Dealer {greek.capitalize()} Exposure by Option Type",
+                     hover_data={exp_col: ':.2f'}) # This will now work correctly
+        
+        # --- MODIFICATION FOR OVERLAY AND TRANSPARENCY ---
+        fig.update_layout(barmode='overlay')
+        fig.for_each_trace(
+            lambda t: t.update(marker_color='#2ca02c', opacity=0.65) if t.name.upper() == 'P' 
+            else t.update(marker_color='#d62728', opacity=0.35)
+        )
+        # --- END MODIFICATION ---
+
+        # Manually set colors: Puts Green, Calls Red
+        fig.for_each_trace(
+            lambda t: t.update(marker_color='#d62728') if t.name.upper() == 'P' else t.update(marker_color='#2ca02c')
+        )
+    
+    # Common layout updates
+    fig.update_yaxes(title_text=f"Dealer {greek.capitalize()} Exposure ($)")
+    if group_by_col == 'expiry_date':
+        fig.update_xaxes(type='category', tickformat='%Y-%m-%d') # Format date ticks
+    return fig
+
 # --- REQ 1 & 2: Define a reusable function for the new plot style ---
-def create_exposure_plot(data, group_by_col, greek, show_net):
+def create_exposure_plot_old(data, group_by_col, greek, show_net):
     exp_col = f'{greek}_exp'
     
     # Define plotting exposure based on Greek conventions for visual separation
