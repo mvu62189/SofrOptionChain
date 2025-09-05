@@ -14,7 +14,6 @@ from sabr_v2 import sabr_vol_lognormal, sabr_vol_normal
 RAW_SNAPSHOTS_DIR = 'snapshots'
 GREEKS_CACHE_DIR = 'analytics_results/greeks_exposure'
 CONTRACT_NOTIONAL = 1_000_000
-CONTRACT_POINT_VALUE = 2500
 
 def build_cache_from_raw_snapshots(model_engine='black76'):
     """
@@ -99,40 +98,13 @@ def build_cache_from_raw_snapshots(model_engine='black76'):
     final_df['rt_open_interest'] = pd.to_numeric(final_df['rt_open_interest'], errors='coerce').fillna(0)
     
     # --- Exposure Calculations ---
-    #final_df['delta_exp'] = final_df['delta'] * final_df['rt_open_interest']  * CONTRACT_NOTIONAL
-    #final_df['gamma_exp'] = final_df['gamma'] * final_df['rt_open_interest']  * (CONTRACT_NOTIONAL * 0.01)
-    #final_df['vega_exp']  = final_df['vega']  * final_df['rt_open_interest']  * CONTRACT_NOTIONAL
-    #final_df['vanna_exp'] = final_df['vanna'] * final_df['rt_open_interest']  * CONTRACT_NOTIONAL * 0.01
-    #final_df['charm_exp'] = final_df['charm'] * final_df['rt_open_interest']  * CONTRACT_NOTIONAL
-    #final_df['theta_exp'] = final_df['theta'] * final_df['rt_open_interest']  * CONTRACT_NOTIONAL
+    final_df['delta_exp'] = final_df['delta'] * final_df['rt_open_interest'] * -1 * CONTRACT_NOTIONAL
+    final_df['gamma_exp'] = final_df['gamma'] * final_df['rt_open_interest'] * -1 * (CONTRACT_NOTIONAL * 0.01) * 0.01
+    final_df['vega_exp']  = final_df['vega']  * final_df['rt_open_interest'] * -1 * CONTRACT_NOTIONAL
+    final_df['vanna_exp'] = final_df['vanna'] * final_df['rt_open_interest'] * -1 * CONTRACT_NOTIONAL * 0.01
+    final_df['charm_exp'] = final_df['charm'] * final_df['rt_open_interest'] * -1 * CONTRACT_NOTIONAL
+    final_df['theta_exp'] = final_df['theta'] * final_df['rt_open_interest'] * -1 * CONTRACT_NOTIONAL
     
-    # --- Corrected Exposure Calculations ---
-
-    # This value represents the dollar value of a 1-point move in the underlying futures contract
-    # For SOFR, the underlying is an interest rate, and a "full point" move is 100 basis points, or 1%.
-    # A 1% move is worth $2,500. So the value of a 0.01 move (1 basis point) is $25.
-    # Your use of a 1M notional is equivalent if you scale everything correctly, but this is more direct.
-
-
-    # Delta Exposure: The change in portfolio value for a 1-point (1%) move in the underlying.
-    final_df['delta_exp'] = final_df['delta'] * final_df['rt_open_interest'] * CONTRACT_POINT_VALUE
-
-    # Gamma Exposure: The change in DELTA exposure for a 1-basis-point (0.01%) move.
-    # Note: It's convention to show gamma exposure per basis point.
-    final_df['gamma_exp'] = final_df['gamma'] * final_df['rt_open_interest'] * (CONTRACT_POINT_VALUE / 100)
-
-    # Vega Exposure: The change in portfolio value for a 1% change in implied volatility.
-    final_df['vega_exp']  = final_df['vega']  * final_df['rt_open_interest'] * CONTRACT_POINT_VALUE
-
-    # Vanna Exposure: The change in DELTA for a 1% change in implied volatility.
-    final_df['vanna_exp'] = final_df['vanna'] * final_df['rt_open_interest'] * CONTRACT_POINT_VALUE
-
-    # Charm Exposure: The change in DELTA per day.
-    final_df['charm_exp'] = final_df['charm'] * final_df['rt_open_interest'] * CONTRACT_POINT_VALUE
-
-    # Theta Exposure: The change in portfolio value per day.
-    final_df['theta_exp'] = final_df['theta'] * final_df['rt_open_interest'] * CONTRACT_POINT_VALUE
-
     # --- Add Partitioning Columns ---
     final_df['snapshot_date'] = pd.to_datetime(final_df['snapshot_ts'].str.split(" ").str[0], format='%Y%m%d').dt.date
     if 'underlying_ticker' not in final_df.columns:
