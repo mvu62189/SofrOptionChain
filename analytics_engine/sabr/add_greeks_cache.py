@@ -18,9 +18,9 @@ GREEKS_CACHE_DIR = 'analytics_results/greeks_exposure'
 CONTRACT_NOTIONAL = 1_000_000
 
 # The specific directory you want to process
-SPECIFIC_SNAPSHOT_DIR = os.path.join(RAW_SNAPSHOTS_DIR, '20250917', '132138')
+SPECIFIC_SNAPSHOT_DIR = os.path.join(RAW_SNAPSHOTS_DIR, '20251106', '163149')
 
-def incremental_cache_update(model_engine='black76'):
+def incremental_cache_update(model_engine='bachelier'):
     """
     Processes all raw snapshot files within a specific folder, calculates greeks
     and exposures, and appends the results to the existing Parquet dataset cache.

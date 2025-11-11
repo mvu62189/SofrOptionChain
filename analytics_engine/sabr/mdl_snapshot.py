@@ -28,7 +28,7 @@ FIELDS = ['opt_strike_px', 'bid', 'ask', 'mid', 'ivol_mid_rt', 'last_price', 'vo
 
 ROOT_FUTURES = [
 
-    'SFRU5', 'SFRZ5', 'SFRH6', 'SFRM6', 'SFRU6', 'SFRZ6',
+    'SFRX5', 'SFRZ5', 'SFRF6', 'SFRG6', 'SFRH6', 'SFRJ6', 'SFRM6',
 
     'SFRH7', 'SFRM7', 'SFRU7', 'SFRZ7', 'SFRH8', 'SFRM8',
 
@@ -221,7 +221,7 @@ if __name__ == '__main__':
     if '--test' in sys.argv:
         logging.info("Running in --test mode with a single future.")
         # Run with just one future for a quick test
-        test_futures = ['SFRU5']
+        test_futures = ['SFRZ5']
         run_snapshot(futures_list=test_futures)
     else:
         # Run with the full list of futures defined in the script

@@ -15,7 +15,7 @@ RAW_SNAPSHOTS_DIR = 'snapshots'
 GREEKS_CACHE_DIR = 'analytics_results/greeks_exposure'
 CONTRACT_NOTIONAL = 1_000_000
 
-def build_cache_from_raw_snapshots(model_engine='black76'):
+def build_cache_from_raw_snapshots(model_engine='bachelier'):
     """
     Processes all raw snapshot files, calculates greeks and exposures,
     and saves the results to a query-optimized partitioned Parquet dataset.
