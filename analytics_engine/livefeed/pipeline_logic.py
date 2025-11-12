@@ -8,7 +8,7 @@ Contains the core ETL business logic for all three phases:
 
 import blpapi
 import config
-from datetime import datetime
+from datetime import datetime, date
 from typing import Dict, List, Tuple, Optional
 
 # Database imports
@@ -19,6 +19,7 @@ from database_manager import engine as db_engine # Import our main engine
 # Service and model imports
 from bloomberg_service import BloombergService, SUBSCRIPTION_DATA
 from data_models import InitialSnapshotModel, LiveSnapshotModel, TradeOccursModel
+from manual_tickers import TICKER_LIST
 
 # --- Phase 1: Scheduled EOD Snapshot ---
 
@@ -299,3 +300,43 @@ def process_subscription_event(
             cached_state.volume = previous_volume # Revert to old volume
             # (Note: Reverting other fields is complex;
             # a more robust system might reload from DB)
+
+
+# --- NEW BYPASS FUNCTION ---
+
+def build_manual_cache() -> Tuple[Dict[str, LiveSnapshotModel], List[str]]:
+    """
+    BYPASS FUNCTION: Creates a minimal in-memory cache from the
+    hardcoded TICKER_LIST. This completely skips all refdata calls.
+    
+    Returns a tuple of: (live_snapshot_cache, active_tickers)
+    """
+    print("--- RUNNING IN MANUAL BYPASS MODE ---")
+    print("--- Bypassing all database and refdata calls ---")
+    
+    live_snapshot_cache: Dict[str, LiveSnapshotModel] = {}
+    active_tickers: List[str] = []
+
+    for ticker in TICKER_LIST:
+        if not ticker or ticker.isspace():
+            continue
+            
+        # Create a DUMMY LiveSnapshotModel.
+        # The only critical field for Phase 3 is 'volume = 0'.
+        # The other fields are just to prevent errors.
+        dummy_model = LiveSnapshotModel(
+            ticker=ticker,
+            underlying="MANUAL",
+            strike=99.0, # Dummy data
+            cp_flag="C",  # Dummy data
+            maturity=date.today(), # Dummy data
+            open_interest=1, # Dummy data
+            settle_price=0.0, # Dummy data
+            volume=0  # <-- This is the only important part
+        )
+        
+        live_snapshot_cache[ticker] = dummy_model
+        active_tickers.append(ticker)
+
+    print(f"Built manual cache with {len(active_tickers)} tickers.")
+    return live_snapshot_cache, active_tickers
